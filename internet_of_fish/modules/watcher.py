@@ -5,6 +5,7 @@ import psutil
 import datetime as dt
 
 
+
 class StatusReport:
 
     def __init__(self, proj_id, curr_mode, curr_procs, last_event):
