@@ -3,7 +3,8 @@ from internet_of_fish.modules.definitions import PROJ_DIR
 from internet_of_fish.modules.utils.gen_utils import recursive_mtime
 import psutil
 import datetime as dt
-
+import socket
+import pickle
 
 
 class StatusReport:
@@ -46,6 +47,13 @@ class WatcherWorker(QueueProcWorker):
         """
         self.last_report = None
         # TODO: Probably set up some of the socket stuff here?
+        c = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_host_name = '127.0.0.1' #Make sure this is the server IP address
+        port_number = 13221 #Make sure this is the server port number
+        c.connect((server_host_name, port_number))
+        return c
+
+
 
     def main_func(self, item):
         """
@@ -54,9 +62,19 @@ class WatcherWorker(QueueProcWorker):
         :param item: dictionary of pertinent status readings, of the form returned by StatusReport.call
         :type item: dict
         """
+        serialized_item = pickle.dumps(item)
+        client = self.startup()
+        client.sendall(serialized_item)
+        self.close_conn(client)
         # set the "last_report" attribute to the new report. This attribute doesn't have a use yet, but can be used to
         # check for changes in status that might trigger different behavior
         self.last_report = item
         # TODO: Connect to the server (if necessary?) and send the status report here
 
-
+    def close_conn(self, conn):
+        """
+        this function is a helper to close the client connection since we are not using context management help from the
+        with statement
+        :type item: socket connection
+        """
+        conn.close()
