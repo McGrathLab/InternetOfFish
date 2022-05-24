@@ -123,5 +123,11 @@ def config(c):
     except Exception as e:
         print(f'config failed with error: {e}')
 
+@task(hosts=MY_HOSTS)
+def run(c, cmd=''):
+    if not cmd:
+        return
+    c.run(cmd)
+
 
 
