@@ -504,11 +504,10 @@ class MetaDataHandler(MetaDataDict):
             raise FileNotFoundError
 
     def generate_mock_metadata(self):
-        contents = self.contents
-        contents['owner'] = 'tst'
-        contents['email'] = 'themcgrathlab@gmail.com'
-        contents['species'] = 'na'
-        contents['fish_type'] = 'other'
+        self['owner'] = 'tst'
+        self['email'] = 'themcgrathlab@gmail.com'
+        self['species'] = 'na'
+        self['fish_type'] = 'other'
         self.set_kill_condition()
         file_utils.create_project_tree(self['proj_id'])
         with open(self['json_path'], 'w') as f:
