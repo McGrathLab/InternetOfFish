@@ -1,5 +1,6 @@
 import glob
 import logging
+from logging.handlers import RotatingFileHandler
 import re
 import time, datetime
 from internet_of_fish.modules import definitions
@@ -143,7 +144,7 @@ class DoubleLogger:
         fmt = '%(asctime)s %(name)-16s %(levelname)-8s %(message)s'
         datefmt = '%Y-%m-%d %H:%M:%S'
         formatter = logging.Formatter(fmt=fmt, datefmt=datefmt)
-        fh = logging.FileHandler(os.path.join(definitions.LOG_DIR, f'{name}.log'), mode='a')
+        fh = RotatingFileHandler(os.path.join(definitions.LOG_DIR, f'{name}.log'), maxBytes=500000, backupCount=1)
         fh.setLevel(level)
         fh.setFormatter(formatter)
         logger = logging.getLogger(name)
