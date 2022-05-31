@@ -85,6 +85,8 @@ class MetaDataDictBase(metaclass=gen_utils.AutologMetaclass):
         value = str(value)
         if key not in self.contents.keys():
             self.logger.warning(f'attempted to set non-existant key {key} in MetaDataDict')
+        elif isinstance(self.contents[key].value, MetaDataDictBase):
+            self.contents[key].value.quick_update(value)
         elif re.fullmatch(my_regexes.any_null, value):
             self.contents[key].value = 'None'
         elif self.contents[key].pattern and not re.match(self.contents[key].pattern, value):
