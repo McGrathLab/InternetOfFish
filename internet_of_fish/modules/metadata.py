@@ -408,6 +408,7 @@ class MetaDataHandler(MetaDataDict):
         file_utils.create_project_tree(self['proj_id'])
         self.verify()
         self.overwrite_json()
+        file_utils.upload(os.path.dirname(self.json_path))
 
     def decode_metadata(self, json_path):
         """read a metadata json file"""
