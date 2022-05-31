@@ -131,6 +131,8 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
 
     def jpgs_to_mp4(self, img_paths, delete_jpgs=True):
         """convert a series of jpgs to a single mp4, and (if delete_jpgs) delete the original images"""
+        if not img_paths:
+            return
         dest_dir = self.defs.PROJ_VID_DIR
         vid_path = internet_of_fish.modules.advanced_utils.jpgs_to_mp4(img_paths, dest_dir, 1//self.defs.INTERVAL_SECS)
         if delete_jpgs:
