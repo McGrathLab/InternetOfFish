@@ -39,8 +39,8 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.work_q, = args
         self.MODELS_DIR = self.defs.MODELS_DIR
         self.DATA_DIR = self.defs.DATA_DIR
-        self.HIT_THRESH = self.defs.HIT_THRESH_SECS
-        self.IMG_BUFFER = self.defs.IMG_BUFFER_SECS
+        self.HIT_THRESH = self.defs.HIT_THRESH_SECS / self.defs.INTERVAL_SECS
+        self.IMG_BUFFER = self.defs.IMG_BUFFER_SECS / self.defs.INTERVAL_SECS
 
     def startup(self):
         self.mock_hit_flag = False
