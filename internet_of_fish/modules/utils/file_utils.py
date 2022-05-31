@@ -93,7 +93,6 @@ def download_json(proj_id=None):
             download(local_to_cloud(source))
     return local_json_path
 
-
 def exists_cloud(local_path):
     """
     simple helper function that returns True if a file exists on Dropbox, false otherwise. May behave strangely if

@@ -32,7 +32,7 @@ def print_selected_log_tail():
 def new_project(**kwargs):
     metadata.MetaDataHandler(**kwargs)
     print('project created and set as the active project. Select "start the currently active project" from the main '
-          'manu to start data collection')
+          'menu to start data collection')
 
 def existing_projects():
     proj_ids = [p for p in os.listdir(definitions.DATA_DIR)]

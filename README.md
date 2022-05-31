@@ -62,4 +62,5 @@ You should see a message indicating that the project is now running in the backg
 detach the screen (by pressing ctrl+a then ctrl+d) and log out of the pi.
 
 ### Active project vs. Running project
-As mentioned in the last section, the terms "active" and "running" 
+As mentioned in the last section, the terms "active" and "running" have specific meanings in the context of this
+application. 

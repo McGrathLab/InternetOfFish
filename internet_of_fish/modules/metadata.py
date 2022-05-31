@@ -376,7 +376,7 @@ class MetaDataDict(MetaDataDictBase):
 
 class MetaDataHandler(MetaDataDict):
 
-    def __init__(self, new_proj=True, json_path=None, **kwargs):
+    def __init__(self, new_proj=True, mock_proj=False, json_path=None, **kwargs):
         """
         relatively thin wrapper around the MetaDataDict class that mostly handles the startup sequence for
         user-initialization or automated initialization of project-specific values.
@@ -396,6 +396,8 @@ class MetaDataHandler(MetaDataDict):
             if new_proj:
                 self.logger.warning('MetaDataHandler instantiated with both new_project=True and json_path specified. '
                                     'Ignoring new_project=True')
+        if mock_proj:
+            self.json_path = self.generate_mock_metadata()
         elif new_proj:
             self.json_path = self.generate_metadata()
         else:
@@ -406,6 +408,7 @@ class MetaDataHandler(MetaDataDict):
         file_utils.create_project_tree(self['proj_id'])
         self.verify()
         self.overwrite_json()
+        file_utils.upload(os.path.dirname(self.json_path))
 
     def decode_metadata(self, json_path):
         """read a metadata json file"""
@@ -500,6 +503,18 @@ class MetaDataHandler(MetaDataDict):
             self.logger.info(f'failed to locate an existing metadata file. Create one by running main.py with the'
                              f' --new_proj flag')
             raise FileNotFoundError
+
+    def generate_mock_metadata(self):
+        self['owner'] = 'tst'
+        self['email'] = 'themcgrathlab@gmail.com'
+        self['species'] = 'na'
+        self['fish_type'] = 'other'
+        self.set_kill_condition()
+        file_utils.create_project_tree(self['proj_id'])
+        with open(self['json_path'], 'w') as f:
+            json.dump(self.simplify(infer_types=False), f, indent=2)
+            self.logger.info('metadata generated and saved to .json file')
+        return self['json_path']
 
     def overwrite_json(self):
         with open(self['json_path'], 'w') as f:

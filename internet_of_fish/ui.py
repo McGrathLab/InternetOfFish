@@ -3,6 +3,8 @@ like a standard python script using "python3 internet_of_fish/ui.py", or by usin
 was added to the .bash_aliases file during configuration"""
 
 import os, sys
+import time
+
 if os.path.abspath(os.path.dirname(os.path.dirname(__file__))) not in sys.path:
     sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 from internet_of_fish.modules.utils import gen_utils, ui_utils, file_utils
@@ -155,6 +157,7 @@ class UI:
         utils_menu.update(Opt('download the .json file for a particular project, and "source" if specified',
                               file_utils.download_json))
         utils_menu.update(Opt('clear the log files', ui_utils.clear_logs))
+        utils_menu.update(Opt('capture and upload a short video clip', self.quick_clip))
 
         main_menu = OptDict(stepout_opt=False)
         main_menu.update(Opt('exit the application', self.goodbye))
@@ -243,7 +246,13 @@ class UI:
         ui_utils.inject_override('ENTER_END_MODE')
         print('end mode override injected. Upload will run in background. Do not exit the app or attempt to start'
               'a new project until "upload complete. exiting" prints to the screen')
-        
+
+    def quick_clip(self):
+        ui_utils.new_project(mock_proj=True)
+        self.start_project()
+        print('collecting a short video clip, please wait')
+        time.sleep(20)
+        self.end_project()
         
 if __name__ == '__main__':
     import argparse

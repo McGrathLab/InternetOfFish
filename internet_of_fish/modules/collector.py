@@ -123,11 +123,24 @@ class SourceCollectorWorker(CollectorWorker):
 
 class SimpleCollectorWorker(CollectorWorker):
 
+    def init_args(self, args):
+        if args:
+            raise ValueError(f"Unexpected arguments to ProcWorker.init_args: {args}")
+        self.INTERVAL_SECS = self.defs.INTERVAL_SECS
+        self.RESOLUTION = (self.defs.H_RESOLUTION, self.defs.V_RESOLUTION)  # pi camera resolution
+        self.FRAMERATE = self.defs.FRAMERATE  # pi camera framerate
+        self.SPLIT_AM_PM = self.defs.SPLIT_AM_PM
+
     def main_func(self):
         time.sleep(5)
         if self.SPLIT_AM_PM and (dt.datetime.now().hour >= 12) and not self.split_flag:
             self.split_recording()
             self.split_flag = True
+
+    def shutdown(self):
+        self.cam.stop_recording()
+        self.cam.close()
+        self.event_q.close()
 
 
 class DepthCollectorWorker(CollectorWorker):

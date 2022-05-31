@@ -142,17 +142,16 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
 
     def active_mode(self):
         self.switch_mode('active')
-        self.img_q = self.secondary_ctx.MPQueue(maxsize=30)
-        if self.metadata['source']:
-            self.secondary_ctx.Proc('COLLECT', collector.SourceCollectorWorker, self.img_q, self.metadata['source'])
-        elif not self.metadata['model_id']:
-            self.secondary_ctx.Proc('COLLECT', collector.SimpleCollectorWorker, self.img_q)
+        if not self.metadata['model_id']:
+            self.logger.debug('model_id not set, initializing SimpleCollector')
+            self.secondary_ctx.Proc('COLLECT', collector.SimpleCollectorWorker)
         else:
-            self.secondary_ctx.Proc('COLLECT', collector.CollectorWorker, self.img_q)
-        if self.metadata['model_id']:
+            self.img_q = self.secondary_ctx.MPQueue(maxsize=30)
+            if self.metadata['source']:
+                self.secondary_ctx.Proc('COLLECT', collector.SourceCollectorWorker, self.img_q, self.metadata['source'])
+            else:
+                self.secondary_ctx.Proc('COLLECT', collector.CollectorWorker, self.img_q)
             self.secondary_ctx.Proc('DETECT', detector.DetectorWorker, self.img_q)
-        else:
-            self.logger.debug('model_id not set, skipping detector initialization')
         self.logger.info('successfully entered active mode')
 
     def passive_mode(self):
