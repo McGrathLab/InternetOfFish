@@ -226,7 +226,11 @@ def autolog(method):
         try:
             logger = self.logger
         except AttributeError:
-            return method(self, *method_args, **method_kwargs)
+            try:
+                return method(self, *method_args, **method_kwargs)
+            except Exception as e:
+                print(e)
+                return
         logger.debug(f'entering {strfmt_func_call(method.__name__, *method_args, **method_kwargs)}')
         result = method(self, *method_args, **method_kwargs)
         logger.debug(f'exiting {method.__name__}')
