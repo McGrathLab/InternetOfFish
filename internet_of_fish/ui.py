@@ -252,7 +252,9 @@ class UI:
         self.start_project()
         print('collecting a short video clip, please wait')
         time.sleep(20)
-        self.end_project()
+        ui_utils.inject_override('ENTER_PASSIVE_MODE')
+        time.sleep(10)
+        ui_utils.pause_project()
         
 if __name__ == '__main__':
     import argparse
