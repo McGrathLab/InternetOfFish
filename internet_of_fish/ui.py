@@ -248,7 +248,7 @@ class UI:
               'a new project until "upload complete. exiting" prints to the screen')
 
     def quick_clip(self):
-        ui_utils.new_project(mock_proj=True)
+        ui_utils.new_project(mock_proj=True, test=True)
         self.start_project()
         print('collecting a short video clip, please wait')
         time.sleep(5)
