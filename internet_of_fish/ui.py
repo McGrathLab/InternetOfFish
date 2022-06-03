@@ -251,9 +251,9 @@ class UI:
         ui_utils.new_project(mock_proj=True)
         self.start_project()
         print('collecting a short video clip, please wait')
-        time.sleep(10)
+        time.sleep(5)
         ui_utils.inject_override('ENTER_PASSIVE_MODE')
-        time.sleep(10)
+        time.sleep(30)
         ui_utils.pause_project()
         
 if __name__ == '__main__':
