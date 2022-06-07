@@ -56,6 +56,9 @@ class NotifierWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
                 print(e)
 
     def check_notification_conditions(self, notification: Notification):
+        # MONKEYPATCH START
+        return False
+        # MONKEYPATCH END
         if not self.last_notification:
             return True
         if self.last_notification.msg_type != notification.msg_type:
