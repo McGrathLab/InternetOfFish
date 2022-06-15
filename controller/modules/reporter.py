@@ -1,5 +1,5 @@
 # TODO: write reporter script
-"""this script should take in status information from multiple pi's via socket connections to their watcher processes,
+"""this script takes in status information from multiple pi's via socket connections to their watcher processes,
 parse those status reports, and compile them into a human-readable format/file (possibly a file that is read-only
 to the user, but writeable by this program?).
 
@@ -12,32 +12,40 @@ https://realpython.com/python-sockets/
 
 from internet_of_fish.modules.utils import gen_utils
 import socket
+import json
+import selectors as sel
 
-LOOPBACK_HOST = "127.0.0.1"
-PORT = 13221
-
+server_host_name = socket.gethostbyname(socket.gethostname())
+port_number = 13221 #Make sure this is the server port number
 
 
 class Reporter(metaclass=gen_utils.AutologMetaclass):
-
     def __init__(self):
-        self.listening_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.listening_socket.bind((LOOPBACK_HOST, PORT))
-
-    def main_loop(self):
-        self.listening_socket.listen()
-        conn, addr = self.listening_socket.accept()
+        self.listening_socket = socket.socket(socket.AF_INET,
+                                              socket.SOCK_STREAM)
+        self.listening_socket.bind((server_host_name, port_number))
 
     def main_func(self):
-        s.listen()
+        """
+        I saw little value in two functions: main_loop and this one because the server listens in a loop
+        by its nature. Thus, everything important is here.
+
+        Returns the dictionary data
+        """
+        serial_data = ''
+      
+        connection_queue_length = 50 #the number of connections that can be held in queue before the system panics
+        self.listening_socket.listen(connection_queue_length)
+        self.listening_socket.settimeout(30)
+        #sel.register(self.listening_socket , sel.EVENT_READ, data=None)
+
         while True:
-            c, addr = s.accept()
-            print ('Got connection from', addr)
-            c.send('Thank you for connecting'.encode())
-            c.close()
-            break
-
-
-
+            conn, addr = self.listening_socket.accept()
+            data = conn.recv(4096)
+            if not data:
+                break
+            serial_data += data
+        with open('file.txt', 'a+') as file:
+          file.write(json.dumps(serial_data)) 
 
 
