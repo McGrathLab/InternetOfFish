@@ -5,7 +5,7 @@ import json
 all_connections = []
 all_address = []
 
-class Reporter2():
+class Reporter():
     def __init__(self):
         self.create_socket()
         self.bind_socket()
