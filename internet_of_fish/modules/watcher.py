@@ -1,6 +1,4 @@
-from internet_of_fish.modules.mptools import QueueProcWorker
-from internet_of_fish.modules.definitions import PROJ_DIR
-from internet_of_fish.modules.utils.gen_utils import recursive_mtime
+
 import psutil
 import datetime as dt
 import socket
@@ -39,16 +37,15 @@ class StatusReport:
         return {key: str(val) for key, val in vars(self).items()}
 
 
-class WatcherWorker(QueueProcWorker):
+class WatcherWorker():
     def startup(self):
         """This function gets called once, during the class initialization. Any code you would put in __init__ can go
         here, without overriding the boilerplate code from the QueueProcWorker parent class.
         """
-        self.last_report = None
         # TODO: Probably set up some of the socket stuff here?
         c = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server_host_name = socket.gethostbyname(socket.gethostname())
-        port_number = 13221  #Make sure this is the server port number
+        server_host_name = '143.215.56.180'
+        port_number = 9999  #Make sure this is the server port number
         try:
             c.connect((server_host_name, port_number))
         except ConnectionError:
@@ -60,9 +57,18 @@ class WatcherWorker(QueueProcWorker):
         this function executes every time the Runner adds a new status report dictionary (of the type returned by
         StatusReport.call) to the status queue, and sends that dictionary to the server.
         """
-        with self.startup() as client:
-            client.sendall(json.loads(StatusReport()))
+        item = {1: 'a', 2: 'b'}
+        print('all')
+        try:
+            print('all')
+            with self.startup() as client:
+                client.sendall(bytes(json.dumps(item), 'utf - 8'))
+                print('all')
+        except IOError as e:
+                pass
+
         # set the "last_report" attribute to the new report. This attribute doesn't have a use yet, but can be used to
         # check for changes in status that might trigger different behavior
         #self.last_report = item
         # TODO: Connect to the server (if necessary?) and send the status report here
+
