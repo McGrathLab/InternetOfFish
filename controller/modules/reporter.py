@@ -35,7 +35,6 @@ class Reporter():
 
         except socket.error as msg:
             print("Socket Binding error" + str(msg) + "\n" + "Retrying...")
-            bind_socket()
 
 
     # Handling connection from multiple clients and saving to a list
