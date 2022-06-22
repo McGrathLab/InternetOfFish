@@ -38,37 +38,35 @@ class StatusReport:
 
 
 class WatcherWorker():
-    def startup(self):
+    def __init__(self):
         """This function gets called once, during the class initialization. Any code you would put in __init__ can go
         here, without overriding the boilerplate code from the QueueProcWorker parent class.
         """
         # TODO: Probably set up some of the socket stuff here?
-        c = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server_host_name = '143.215.56.180'
-        port_number = 9999  #Make sure this is the server port number
-        try:
-            c.connect((server_host_name, port_number))
-        except ConnectionError:
-            print("Connection Refused")
-        return c
+        self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server_host_name = '10.2.192.13'
+        self.port_number = 9999  #Make sure this is the server port number
+        
 
-    def main_func(self):
+    def connect_to_server(self):
         """
         this function executes every time the Runner adds a new status report dictionary (of the type returned by
         StatusReport.call) to the status queue, and sends that dictionary to the server.
         """
-        item = {1: 'a', 2: 'b'}
-        print('all')
+        try:
+            self.client_socket.connect((self.server_host_name, self.port_number))
+        except ConnectionError:
+            print("Connection Refused")
+
+    def send_data(self, item):
+        try:
+            self.client_socket.connect((self.server_host_name, self.port_number))
+        except ConnectionError:
+            print("Connection Refused")
+
         try:
             print('all')
-            with self.startup() as client:
-                client.sendall(bytes(json.dumps(item), 'utf - 8'))
-                print('all')
+            self.client_socket.sendall(bytes(json.dumps(item), 'utf - 8'))
+            print('all')
         except IOError as e:
                 pass
-
-        # set the "last_report" attribute to the new report. This attribute doesn't have a use yet, but can be used to
-        # check for changes in status that might trigger different behavior
-        #self.last_report = item
-        # TODO: Connect to the server (if necessary?) and send the status report here
-
