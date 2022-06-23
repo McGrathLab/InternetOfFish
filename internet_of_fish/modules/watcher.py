@@ -69,3 +69,7 @@ class WatcherWorker(QueueProcWorker, metaclass=gen_utils.AutologMetaclass):
             self.client_socket.sendall(bytes(json.dumps(item), 'utf - 8'))
         except IOError as ioe:
             print('IO Error', ioe)
+
+    def shutdown(self):
+        self.work_q.close()
+        self.event_q.close()
