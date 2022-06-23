@@ -1,5 +1,4 @@
 
-import psutil
 import datetime as dt
 import socket
 import json
@@ -38,27 +37,17 @@ class StatusReport:
 
 
 class WatcherWorker():
-    def __init__(self):
+    def __init__(self, host_name):
         """This function gets called once, during the class initialization. Any code you would put in __init__ can go
         here, without overriding the boilerplate code from the QueueProcWorker parent class.
         """
         # TODO: Probably set up some of the socket stuff here?
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_host_name = '10.2.192.13'
+        self.server_host_name = host_name
         self.port_number = 9999  #Make sure this is the server port number
-        
 
-    def connect_to_server(self):
-        """
-        this function executes every time the Runner adds a new status report dictionary (of the type returned by
-        StatusReport.call) to the status queue, and sends that dictionary to the server.
-        """
-        try:
-            self.client_socket.connect((self.server_host_name, self.port_number))
-        except ConnectionError:
-            print("Connection Refused")
 
-    def send_data(self, item):
+    def main_func(self, item):
         try:
             self.client_socket.connect((self.server_host_name, self.port_number))
         except ConnectionError:
