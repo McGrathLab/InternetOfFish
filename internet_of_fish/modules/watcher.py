@@ -1,5 +1,8 @@
 from internet_of_fish.modules.mptools import QueueProcWorker
+from internet_of_fish.modules.definitions import PROJ_DIR
+from internet_of_fish.modules.utils import gen_utils
 import datetime as dt
+import psutil
 import socket
 import json
 
@@ -30,26 +33,23 @@ class StatusReport:
         self.disk_usage = float(psutil.disk_usage('/').percent)
         self.mem_usage = float(psutil.virtual_memory().percent)
         self.idle_time = (dt.datetime.now() -
-                          recursive_mtime(PROJ_DIR(proj_id))).total_seconds()
+                          gen_utils.recursive_mtime(PROJ_DIR(proj_id))).total_seconds()
 
     def __call__(self):
         return {key: str(val) for key, val in vars(self).items()}
 
 
-class WatcherWorker(QueueProcWorker):
-    def __init__(self, host_name):
+class WatcherWorker(QueueProcWorker, metaclass=gen_utils.AutologMetaclass):
+
+    def startup(self):
         '''
         Initialize the WatcherWorker object with a client object
-
-        :param host_name: IP address of the server to which the client will connect
-        :type host_name: str
 
         Note: According to StackOverflow lore, Python sockets can have occasional
         trouble parsing IPv6
         '''
-        # TODO: Probably set up some of the socket stuff here?
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_host_name = host_name
+        self.server_host_name = '130.207.71.136'
         self.port_number = 9999  #Make sure this is the server port number
 
 
