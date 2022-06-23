@@ -16,5 +16,6 @@ if os.path.dirname(os.path.dirname(os.path.abspath(__file__))) not in sys.path:
 from internet_of_fish.modules.watcher import WatcherWorker
 
 x = {1:'a'}
-WatcherWorker.startup()
-WatcherWorker.main_func(item = x)
+w = WatcherWorker()
+w.startup()
+w.main_func(item = x)

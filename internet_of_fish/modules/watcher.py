@@ -41,7 +41,7 @@ class StatusReport:
 
 class WatcherWorker(QueueProcWorker, metaclass=gen_utils.AutologMetaclass):
 
-    def startup():
+    def startup(self):
         '''
         Initialize the WatcherWorker object with a client object
 
@@ -53,7 +53,7 @@ class WatcherWorker(QueueProcWorker, metaclass=gen_utils.AutologMetaclass):
         self.port_number = 9999  #Make sure this is the server port number
 
 
-    def main_func(item):
+    def main_func(self, item):
         '''
         Run the main loop of the client. Connects and sends data to server
 
