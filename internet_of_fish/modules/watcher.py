@@ -1,4 +1,4 @@
-
+from internet_of_fish.modules.mptools import QueueProcWorker
 import datetime as dt
 import socket
 import json
@@ -36,11 +36,17 @@ class StatusReport:
         return {key: str(val) for key, val in vars(self).items()}
 
 
-class WatcherWorker():
+class WatcherWorker(QueueProcWorker):
     def __init__(self, host_name):
-        """This function gets called once, during the class initialization. Any code you would put in __init__ can go
-        here, without overriding the boilerplate code from the QueueProcWorker parent class.
-        """
+        '''
+        Initialize the WatcherWorker object with a client object
+
+        :param host_name: IP address of the server to which the client will connect
+        :type host_name: str
+
+        Note: According to StackOverflow lore, Python sockets can have occasional
+        trouble parsing IPv6
+        '''
         # TODO: Probably set up some of the socket stuff here?
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_host_name = host_name
@@ -48,14 +54,18 @@ class WatcherWorker():
 
 
     def main_func(self, item):
+        '''
+        Run the main loop of the client. Connects and sends data to server
+
+        :param item: data to be transmitted to the server. Must be serializable.
+        :type item: any serializable Python object
+        '''
         try:
             self.client_socket.connect((self.server_host_name, self.port_number))
         except ConnectionError:
             print("Connection Refused")
 
         try:
-            print('all')
             self.client_socket.sendall(bytes(json.dumps(item), 'utf - 8'))
-            print('all')
-        except IOError as e:
-                pass
+        except IOError as ioe:
+            print('IO Error', ioe)

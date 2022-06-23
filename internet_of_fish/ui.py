@@ -4,9 +4,14 @@ was added to the .bash_aliases file during configuration"""
 
 import os, sys
 import time
-
+'''
+Linux/Pi
 if os.path.abspath(os.path.dirname(os.path.dirname(__file__))) not in sys.path:
     sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
+'''
+if os.path.dirname(os.path.dirname(os.path.abspath(__file__))) not in sys.path:
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from internet_of_fish.modules.utils import gen_utils, ui_utils, file_utils
 from internet_of_fish.modules import metadata
 from internet_of_fish.modules import mptools
