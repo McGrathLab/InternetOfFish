@@ -1,44 +1,31 @@
+
+from audioop import add
 import socket
 import sys
 import json
 
-all_connections = []
-all_address = []
+all_addresses = []
 
 class Reporter():
-    def __init__(self):
-        self.create_socket()
-        self.bind_socket()
+    def __init__(self, queue_length):
 
-    def create_socket(self):
-        '''
-        Create a server socket and set global parameters for initialization
-        '''
+        #create
         try:
-            global host
-            global port
-            global s
-            host = socket.gethostbyname(socket.gethostname())
-            port = 9999 #very unlikely not to work. If it doesn't, just put random 4 digit numbers above 1024 until it works
-            s = socket.socket()
-
+            '''
+            i am testing this one mac which has an old macOS related issue. when using for linux
+             or macOS bigSur or later,more robust method gethostname() can be usd instead of 'localhost'
+            '''
+            self.host = socket.gethostbyname('localhost') 
+            self.port = 9999
+            self.server = socket.socket()
+            print(self.host)
         except socket.error as msg:
             print("Socket creation error: " + str(msg))
 
-
-    # Binding the socket and listening for connections
-    def bind_socket(self):
-        '''
-        Bind the server socket to the local IP and  given port number
-        '''
+        #bind
         try:
-            global host
-            global port
-            global s
-            print(host)
-            s.bind((host, port))
-            s.listen(5)
-
+            self.server.bind((self.host, self.port))
+            self.server.listen(queue_length)
         except socket.error as msg:
             print("Socket Binding error" + str(msg) + "\n" + "Retrying...")
 
@@ -46,29 +33,32 @@ class Reporter():
     # Handling connection from multiple clients and saving to a list
     # Closing previous connections when server.py file is restarted
 
-    def accepting_connections(self, dict_list):
-        #close all existing connections
-        for c in all_connections:
-            c.close()
+    def accepting_connections(self, data_dict):
         #cleaning data of clients from the last time the server was working
-        del all_connections[:]
-        del all_address[:]
+        del all_addresses[:]
 
         #Keep ears open for connections fro clients and receive data
         while True:
             try:
-                conn, address = s.accept()
-                s.setblocking(True)  # prevents timeout
+                conn, address = self.server.accept()
+                self.server.setblocking(True)  #finishes dealing with one client before accepting another
                 print("Connection has been established :" + address[0])
                 serial_data = ''
-                data = conn.recv(4096).decode('utf-8') #It will throw away any data beyond 4096 bytes
-                serial_data += data
-                dict_list.append(json.loads(serial_data))
-            except:
-                print("Error accepting connections")
-    
-    def get_addresses(self):
-        '''
-        Returns connection addresses of all the clients
-        '''
-        return all_address
+                #create a record of any new connection using unique IP-port number combination
+                if address not in all_addresses:
+                    all_addresses.append(address)
+                    data_dict[address] = []
+                #keep receiving data until there is none left
+                while True:
+                    data = conn.recv(1024)
+                    if data:
+                        serial_data += data.decode('utf-8')
+                    else:
+                        break
+                conn.close()
+                #deserialize and record the data
+                data_dict[address].append(json.loads(serial_data))
+                print(data_dict)
+            except Exception as e:
+                print("Error accepting connections", e)
+  
