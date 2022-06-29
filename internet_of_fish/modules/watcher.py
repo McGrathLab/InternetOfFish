@@ -8,7 +8,7 @@ import json
 
 
 class StatusReport:
-    def __init__(self, proj_id, curr_mode, curr_procs, last_event):
+    def __init__(self, proj_id, user_email, curr_mode, curr_procs, last_event):
         """
         Simple container class for standardizing and partially automating the status reports that pass between the
         clients and server. Instances of the StatusReport class can be called without arguments to return the instance
@@ -29,6 +29,7 @@ class StatusReport:
         self.curr_mode = curr_mode
         self.curr_procs = curr_procs
         self.last_event = last_event
+        self.user_email = user_email
         # generate additional attributes programmatically
         self.disk_usage = float(psutil.disk_usage('/').percent)
         self.mem_usage = float(psutil.virtual_memory().percent)

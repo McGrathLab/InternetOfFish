@@ -291,5 +291,5 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
 
     def status_report(self):
         procs = [p.name for p in self.main_ctx.procs]
-        report = watcher.StatusReport(self.metadata['proj_id'], self.curr_mode, procs, self.last_event)
+        report = watcher.StatusReport(self.metadata['proj_id'], self.metadata['email'], self.curr_mode, procs, self.last_event)
         return report()
