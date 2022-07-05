@@ -106,7 +106,12 @@ def recursive_mtime(path):
         return datetime.datetime.fromtimestamp(os.path.getmtime(path))
     else:
         paths = glob.glob(os.path.join(path, '**', '*'), recursive=True)
-        mtimes = [os.path.getmtime(p) for p in paths]
+        mtimes = []
+        for p in paths:
+            try:
+                mtimes.append(os.path.getmtime(p))
+            except FileNotFoundError:
+                pass
         try:
             return datetime.datetime.fromtimestamp(max(mtimes))
         except ValueError:
