@@ -21,9 +21,8 @@ class MutliClientCaller():
     def test(self, dummy_client_num):
         
             send_item = w.StatusReport(proj_id="dummyProject", curr_mode="passive",
-             curr_procs=["appleProcess", "bananaProcess", "guavaProcess"], last_event="ENTER_ACTIVE_MODE")
+             curr_procs=["appleProcess", "bananaProcess", "guavaProcess"], last_event="ENTER_ACTIVE_MODE", user_email = 'chinardankhara@gmail.com')
 
-            #loop 25 times
             for i in range(dummy_client_num):
                 #create sender object from watcherworker
                 sender = w.WatcherWorker()
@@ -31,8 +30,7 @@ class MutliClientCaller():
                 sender.startup()
                 #send data to server
                 sender.main_func(send_item)
+                time.sleep(10)
 
 m = MutliClientCaller()
-m.test(5)
-
-
+m.test(2)

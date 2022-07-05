@@ -35,6 +35,12 @@ class StatusReport:
         self.mem_usage = float(psutil.virtual_memory().percent)
         self.idle_time = (dt.datetime.now() -
                           gen_utils.recursive_mtime(PROJ_DIR(proj_id))).total_seconds()
+        #get datetime now and format it to string
+        self.time_stamp = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    def toJSON(self):
+        return json.dumps(self, default=lambda o: o.__dict__, 
+            sort_keys=True, indent=4)
 
     def __call__(self):
         return {key: str(val) for key, val in vars(self).items()}
@@ -50,7 +56,7 @@ class WatcherWorker(QueueProcWorker, metaclass=gen_utils.AutologMetaclass):
         trouble parsing IPv6
         '''
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_host_name = '130.207.71.136'
+        self.server_host_name = '127.0.0.1'
         self.port_number = 9999  #Make sure this is the server port number
 
 
@@ -67,7 +73,7 @@ class WatcherWorker(QueueProcWorker, metaclass=gen_utils.AutologMetaclass):
             print("Connection Refused")
 
         try:
-            self.client_socket.sendall(bytes(json.dumps(item), 'utf - 8'))
+            self.client_socket.sendall(bytes(json.dumps(item.toJSON()), 'utf - 8'))
         except IOError as ioe:
             print('IO Error', ioe)
 

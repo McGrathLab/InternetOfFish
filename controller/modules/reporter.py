@@ -1,8 +1,12 @@
-
+import os
 from audioop import add
 import socket
 import sys
 import json
+import datetime as dt
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
+import ast
 
 all_addresses = []
 
@@ -36,7 +40,7 @@ class Reporter():
     def accepting_connections(self, data_dict):
         #cleaning data of clients from the last time the server was working
         del all_addresses[:]
-
+        last_check = dt.datetime.now()
         #Keep ears open for connections fro clients and receive data
         while True:
             try:
@@ -44,10 +48,25 @@ class Reporter():
                 self.server.setblocking(True)  #finishes dealing with one client before accepting another
                 print("Connection has been established :" + address[0])
                 serial_data = ''
-                #create a record of any new connection using unique IP-port number combination
+
                 if address not in all_addresses:
                     all_addresses.append(address)
                     data_dict[address] = []
+
+                if dt.datetime.now() - last_check > dt.timedelta(seconds=5):
+                    try:
+                        last_check = dt.datetime.now()
+                        print("Checking for clients...")
+                        for address in data_dict.keys():
+                            if data_dict[address][len(data_dict[address]) - 1] == 'email sent':
+                                continue
+                            else:
+                                last_stamp = dt.datetime.strptime(((data_dict[address])[len(data_dict[address]) - 1])['time_stamp'], "%Y-%m-%d %H:%M:%S")
+                                if last_check - last_stamp > dt.timedelta(seconds=5):
+                                    self.send_email(data_dict, address)
+                    except Exception as e:
+                        print(e)
+
                 #keep receiving data until there is none left
                 while True:
                     data = conn.recv(1024)
@@ -57,8 +76,23 @@ class Reporter():
                         break
                 conn.close()
                 #deserialize and record the data
-                data_dict[address].append(json.loads(serial_data))
+                data_dict[address].append(ast.literal_eval(json.loads(serial_data)))
                 print(data_dict)
             except Exception as e:
                 print("Error accepting connections", e)
+    
+    def send_email(self, data_dict, address):
+        to_send = json.dumps(data_dict[address][len(data_dict[address]) - 1])
+        message = Mail(from_email='chinarshital@gmail.com',
+         to_emails=data_dict[address][len(data_dict[address]) - 1]['user_email'],
+          subject='McGrathLab - a Pi is down!', plain_text_content=to_send)
+
+        try:
+            sg = SendGridAPIClient(os.environ.get('SENDGRID_API_KEY')) #requires some setup, check https://pypi.org/project/sendgrid/
+            response = sg.send(message)
+            print(response.status_code)
+            print(response.body)
+            print(response.headers)
+        except Exception as e:
+            print(e.message)
   
