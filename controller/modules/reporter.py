@@ -58,12 +58,14 @@ class Reporter():
                         last_check = dt.datetime.now()
                         print("Checking for clients...")
                         for address in data_dict.keys():
-                            if data_dict[address][len(data_dict[address]) - 1] == 'email sent':
+                            if (len(data_dict[address]) == 0) or (data_dict[address][len(data_dict[address]) - 1] == 'email sent'):
                                 continue
                             else:
                                 last_stamp = dt.datetime.strptime(((data_dict[address])[len(data_dict[address]) - 1])['time_stamp'], "%Y-%m-%d %H:%M:%S")
                                 if last_check - last_stamp > dt.timedelta(seconds=5):
-                                    self.send_email(data_dict, address)
+                                    data_dict[address].append('email sent')
+                                    print("Sending email to " + str(address))
+                                    #self.send_email(data_dict, address)
                     except Exception as e:
                         print(e)
 

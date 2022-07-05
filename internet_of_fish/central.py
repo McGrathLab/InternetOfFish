@@ -30,7 +30,9 @@ class MutliClientCaller():
                 sender.startup()
                 #send data to server
                 sender.main_func(send_item)
-                time.sleep(10)
+                time.sleep(7)
 
 m = MutliClientCaller()
-m.test(2)
+m.test(5)
+
+
