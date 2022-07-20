@@ -116,14 +116,17 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         fish_dets, pipe_det = self.filter_dets(buffer_entry.dets)
         intersect_count = 0
         for det in fish_dets:
-            intersect = detect.BBox.intersect(det.bbox, pipe_det[0].bbox)
-            intersect_flag = (intersect.valid and isclose(intersect.area, det.bbox.area))
-            intersect_count += intersect_flag
-            color = 'green' if intersect_flag else 'red'
+            if not pipe_det:
+                color = 'red'
+            else:
+                intersect = detect.BBox.intersect(det.bbox, pipe_det[0].bbox)
+                intersect_flag = (intersect.valid and isclose(intersect.area, det.bbox.area))
+                intersect_count += intersect_flag
+                color = 'green' if intersect_flag else 'red'
             overlay_box(det, color)
-            
-        color = 'red' if not intersect_count else 'yellow' if intersect_count == 1 else 'green'
-        overlay_box(pipe_det[0], color)
+        if pipe_det:
+            color = 'red' if not intersect_count else 'yellow' if intersect_count == 1 else 'green'
+            overlay_box(pipe_det[0], color)
         
         img_path = os.path.join(self.img_dir, f'{buffer_entry.cap_time}.jpg')
         buffer_entry.img.save(img_path)
