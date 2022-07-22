@@ -69,7 +69,7 @@ class NotifierWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             from_email='themcgrathlab@gmail.com',
             to_emails=self.user_email,
             subject=notification.msg_type,
-            html_content=notification.msg)
+            html_content=str(notification))
         with open(notification.attachment_path, 'rb') as f:
             data = f.read()
         encoded = base64.b64encode(data).decode()
