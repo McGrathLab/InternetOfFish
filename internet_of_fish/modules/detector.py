@@ -68,8 +68,6 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         dets = self.detect(img)
         fish_dets, pipe_det = self.filter_dets(dets)
         self.buffer.append(BufferEntry(cap_time, img, fish_dets + pipe_det))
-        if self.metadata['source']:
-            self.overlay_boxes(self.buffer[-1])
         hit_flag = self.check_for_hit(fish_dets, pipe_det)
         self.hit_counter.increment() if hit_flag else self.hit_counter.decrement()
         if self.mock_hit_flag or (self.hit_counter.hits >= self.HIT_THRESH):
