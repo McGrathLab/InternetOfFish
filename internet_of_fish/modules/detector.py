@@ -77,8 +77,11 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             self.logger.info(f"Hit counter reached {self.hit_counter.hits}, possible spawning event")
             img_paths = [self.overlay_boxes(be) for be in self.buffer]
             vid_path = self.jpgs_to_mp4(img_paths)
-            msg = f'possible spawning event in {self.metadata["tank_id"]} at {gen_utils.current_time_iso()}'
-            self.event_q.safe_put(mptools.EventMessage(self.name, 'NOTIFY', ['SPAWNING_EVENT', msg, vid_path]))
+
+            ## uncomment to re-enable spawn notifier
+            # msg = f'possible spawning event in {self.metadata["tank_id"]} at {gen_utils.current_time_iso()}'
+            # self.event_q.safe_put(mptools.EventMessage(self.name, 'NOTIFY', ['SPAWNING_EVENT', msg, vid_path]))
+
             self.hit_counter.reset()
             self.buffer = []
         if len(self.buffer) > self.IMG_BUFFER:
