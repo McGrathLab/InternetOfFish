@@ -88,12 +88,12 @@ def import_ascii_art():
         return dict(zip(ret[::2], ret[1::2]))
 
 
-def freeze_definitions(proj_id, additional_definitions=None):
-    defs = {'PROJ_ID': proj_id}
+def freeze_definitions(proj_id, analysis_state, additional_definitions=None):
+    defs = {'PROJ_ID': proj_id, 'ANALYSIS_STATE': analysis_state}
     for setting in dir(definitions):
         if setting.isupper() and not setting.startswith('_'):
             if callable(getattr(definitions, setting)):
-                defs.update({setting: getattr(definitions, setting)(proj_id)})
+                defs.update({setting: getattr(definitions, setting)(proj_id, analysis_state)})
             else:
                 defs.update({setting: getattr(definitions, setting)})
     if additional_definitions:

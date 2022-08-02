@@ -18,9 +18,9 @@ PAUSE_FILE = os.path.join(HOME_DIR, 'HARD_SHUTDOWN')
 SENDGRID_KEY_FILE = os.path.join(CREDENTIALS_DIR, 'sendgrid_key.secret')
 
 # variable paths
-PROJ_DIR = lambda proj_id: os.path.join(DATA_DIR, proj_id)
-PROJ_VID_DIR = lambda proj_id: os.path.join(PROJ_DIR(proj_id), 'Videos')
-PROJ_IMG_DIR = lambda proj_id: os.path.join(PROJ_DIR(proj_id), 'Images')
-PROJ_LOG_DIR = lambda proj_id: os.path.join(PROJ_DIR(proj_id), 'Logs')
-PROJ_JSON_FILE = lambda proj_id: os.path.join(PROJ_DIR(proj_id), f'{proj_id}.json')
+PROJ_DIR = lambda proj_id, analysis_state: os.path.join(DATA_DIR, analysis_state, proj_id)
+PROJ_VID_DIR = lambda proj_id, analysis_state: os.path.join(PROJ_DIR(proj_id, analysis_state), 'Videos')
+PROJ_IMG_DIR = lambda proj_id, analysis_state: os.path.join(PROJ_DIR(proj_id, analysis_state), 'Images')
+PROJ_LOG_DIR = lambda proj_id, analysis_state: os.path.join(PROJ_DIR(proj_id, analysis_state), 'Logs')
+PROJ_JSON_FILE = lambda proj_id, analysis_state: os.path.join(PROJ_DIR(proj_id, analysis_state), f'{proj_id}.json')
 

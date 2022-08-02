@@ -220,13 +220,15 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
         next_start = curr_time.replace(hour=self.defs.START_HOUR, minute=0, second=0, microsecond=0)
         return gen_utils.sleep_secs(600, next_start.timestamp())
 
-    def queue_uploads(self, proj_id=None, queue_end_signals=True):
+    def queue_uploads(self, proj_id=None, analysis_state=None, queue_end_signals=True):
         if not proj_id:
             proj_id = self.metadata['proj_id']
-        proj_dir = definitions.PROJ_DIR(proj_id)
-        proj_log_dir = definitions.PROJ_LOG_DIR(proj_id)
-        proj_vid_dir = definitions.PROJ_VID_DIR(proj_id)
-        proj_img_dir = definitions.PROJ_IMG_DIR(proj_id)
+        if not analysis_state:
+            analysis_state = self.metadata['analysis_state']
+        proj_dir = definitions.PROJ_DIR(proj_id, analysis_state)
+        proj_log_dir = definitions.PROJ_LOG_DIR(proj_id, analysis_state)
+        proj_vid_dir = definitions.PROJ_VID_DIR(proj_id, analysis_state)
+        proj_img_dir = definitions.PROJ_IMG_DIR(proj_id, analysis_state)
 
         if os.path.exists(proj_log_dir):
             shutil.rmtree(proj_log_dir)
