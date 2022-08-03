@@ -1,4 +1,5 @@
 import os, logging, posixpath
+from glob import glob
 
 # constant paths
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -17,10 +18,33 @@ END_FILE = os.path.join(HOME_DIR, 'ENTER_END_MODE')
 PAUSE_FILE = os.path.join(HOME_DIR, 'HARD_SHUTDOWN')
 SENDGRID_KEY_FILE = os.path.join(CREDENTIALS_DIR, 'sendgrid_key.secret')
 
-# variable paths
-PROJ_DIR = lambda proj_id, analysis_state: os.path.join(DATA_DIR, analysis_state, proj_id)
-PROJ_VID_DIR = lambda proj_id, analysis_state: os.path.join(PROJ_DIR(proj_id, analysis_state), 'Videos')
-PROJ_IMG_DIR = lambda proj_id, analysis_state: os.path.join(PROJ_DIR(proj_id, analysis_state), 'Images')
-PROJ_LOG_DIR = lambda proj_id, analysis_state: os.path.join(PROJ_DIR(proj_id, analysis_state), 'Logs')
-PROJ_JSON_FILE = lambda proj_id, analysis_state: os.path.join(PROJ_DIR(proj_id, analysis_state), f'{proj_id}.json')
 
+# variable paths
+def PROJ_DIR(proj_id, analysis_state=None):
+    """if the analysis_state argument is provided, this function will construct the path to the local project directory
+    whether or not it currently exists. If analysis_state is not provided, this function will infer it by searching
+    for a project with the correct project ID and assuming the analysis state is the name of the parent directory.
+    If analysis_state is not provided and a local copy of the project does not already exist, a FileNotFound error will
+    be raised."""
+    if analysis_state:
+        return os.path.join(DATA_DIR, analysis_state, proj_id)
+    ret = glob(os.path.join(DATA_DIR, '**', proj_id))
+    if not ret:
+        raise FileNotFoundError
+    return ret[0]
+
+
+def PROJ_VID_DIR(proj_id, analysis_state=None):
+    return os.path.join(PROJ_DIR(proj_id, analysis_state), 'Videos')
+
+
+def PROJ_IMG_DIR(proj_id, analysis_state=None):
+    return os.path.join(PROJ_DIR(proj_id, analysis_state), 'Images')
+
+
+def PROJ_LOG_DIR(proj_id, analysis_state=None):
+    return os.path.join(PROJ_DIR(proj_id, analysis_state), 'Logs')
+
+
+def PROJ_JSON_FILE(proj_id, analysis_state=None):
+    return os.path.join(PROJ_DIR(proj_id, analysis_state), f'{proj_id}.json')
