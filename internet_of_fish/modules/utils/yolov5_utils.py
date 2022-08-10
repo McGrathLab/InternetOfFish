@@ -7,7 +7,7 @@ from pycoral.adapters import common
 import cv2
 from PIL import Image
 from collections import namedtuple
-from pycoral.adapter.detect import Object, BBox
+from pycoral.adapters.detect import Object, BBox
 
 def xywh2xyxy(x):
     # Convert nx4 boxes from [x, y, w, h] to [x1, y1, x2, y2] where xy1=top-left, xy2=bottom-right
