@@ -132,8 +132,12 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
                       fill=color_)
             
         fish_dets, pipe_det = self.filter_dets(buffer_entry.dets)
-        print(f'fish_dets:{fish_dets}')
-        print(f'pipe_det: {pipe_det}')
+        print('fish_dets:')
+        for det in fish_dets:
+            print(f'{det.bbox.xmin}, {det.bbox.xmax}, {det.bbox.ymin}, {det.bbox.ymax}, {det.score}, {det.id}')
+        print('pipe_det:')
+        for det in pipe_det:
+            print(f'{det.bbox.xmin}, {det.bbox.xmax}, {det.bbox.ymin}, {det.bbox.ymax}, {det.score}, {det.id}')
         intersect_count = 0
         for det in fish_dets:
             intersect = detect.BBox.intersect(det.bbox, pipe_det[0].bbox)
