@@ -214,6 +214,7 @@ class EdgeTPUModel:
 
         self.make_interpreter()
         self.get_image_size()
+        print(self.input_size)
 
     def make_interpreter(self):
         """
