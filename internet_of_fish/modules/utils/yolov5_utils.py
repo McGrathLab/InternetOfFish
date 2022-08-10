@@ -257,7 +257,7 @@ class EdgeTPUModel:
         for row in range(len(det)):
             bbox = BBox
             bbox.xmin, bbox.ymin, bbox.xmax, bbox.ymax = list(det[row, :4])
-            det_objs.append(Object(id=det[row, 6], score=det[row, 5], bbox=bbox))
+            det_objs.append(Object(id=det[row, 5], score=det[row, 4], bbox=bbox))
         return det_objs
 
     def forward(self, x: np.ndarray, with_nms=True) -> np.ndarray:
