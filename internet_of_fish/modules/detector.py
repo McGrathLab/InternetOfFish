@@ -52,18 +52,17 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         model_path = glob(os.path.join(self.MODELS_DIR, self.metadata['model_id'], '*.tflite'))[0]
         label_path = glob(os.path.join(self.MODELS_DIR, self.metadata['model_id'], '*.txt'))[0]
         if 'yolov5' in self.metadata['model_id']:
+            from internet_of_fish.modules.utils.yolov5_utils import EdgeTPUModel
+            self.model = EdgeTPUModel(model_path, conf_thresh=self.defs.CONF_THRESH, max_det=self.max_fish)
             self.det_func = self.yolo_detect
-            delegate = 'libedgetpu.so.1'
-            self.interpreter = Interpreter(model_path=model_path, experimental_delegates=[load_delegate(delegate)])
+
         else:
             self.det_func = self.detect
             self.interpreter = make_interpreter(model_path)
-        self.interpreter.allocate_tensors()
+            self.interpreter.allocate_tensors()
 
         self.labels = read_label_file(label_path)
         self.ids = {val: key for key, val in self.labels.items()}
-        self.input_details = self.interpreter.get_input_details()
-        self.output_details = self.interpreter.get_output_details()
 
         self.hit_counter = HitCounter()
         self.avg_timer = gen_utils.Averager()
@@ -117,19 +116,10 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
 
     def yolo_detect(self, img):
         start = time.time()
-        b, ch, h, w = img.shape
-        img = img.permute(0, 2, 3, 1).cpu().numpy()
-        scale, zero_point = self.input_details[0]['quantization']
-        img = (img / scale + zero_point).astype(np.uint8)
-        self.interpreter.set_tensor(self.input_details[0]['index'], img)
-        self.interpreter.invoke()
+        dets = self.model.predict(img)
         self.avg_timer.update(time.time() - start)
-        y = self.interpreter.get_tensor(self.output_details[0]['index'])
-        scale, zero_point = self.output_details[0]['quantization']
-        y = (y.astype(np.float32) - zero_point) * scale
-        y[..., :4] *= [w, h, w, h]
-        print(y)
-        return y
+        print(dets)
+        return dets
 
     def overlay_boxes(self, buffer_entry: BufferEntry):
         """open an image, draw detection boxes, and replace the original image"""     
