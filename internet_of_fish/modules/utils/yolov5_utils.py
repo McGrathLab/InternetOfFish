@@ -255,8 +255,7 @@ class EdgeTPUModel:
         det[:, :4] = self.get_scaled_coords(det[:, :4], full_image, pad)
         det_objs = []
         for row in range(len(det)):
-            bbox = BBox
-            bbox.xmin, bbox.ymin, bbox.xmax, bbox.ymax = list(det[row, :4])
+            bbox = BBox(xmin=det[row, 0], ymin=det[row, 1], xmax=det[row, 2], ymax=det[row, 3])
             det_objs.append(Object(id=int(det[row, 5]), score=det[row, 4], bbox=bbox))
         return det_objs
 
