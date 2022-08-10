@@ -163,7 +163,7 @@ def get_image_tensor(img, max_size, debug=False):
     """
     if type(img) is str:
         img = cv2.imread(img)
-    if isinstance(img, Image):
+    if isinstance(img, Image.Image):
         img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
     resized, pad = resize_and_pad(img, max_size)
