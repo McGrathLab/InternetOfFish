@@ -117,7 +117,6 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         dets = self.model.predict(img)
         self.avg_timer.update(time.time() - start)
         print(dets)
-        print(dets.shape)
         return dets
 
     def overlay_boxes(self, buffer_entry: BufferEntry):
