@@ -3,7 +3,7 @@ from collections import namedtuple
 
 from PIL import Image, ImageDraw
 from glob import glob
-from numpy import isclose
+import numpy as np
 
 from pycoral.adapters import common
 from pycoral.adapters import detect
@@ -13,6 +13,8 @@ from pycoral.utils.edgetpu import make_interpreter
 import internet_of_fish.modules.utils.advanced_utils
 from internet_of_fish.modules import mptools
 from internet_of_fish.modules.utils import gen_utils
+
+from tflite_runtime.interpreter import Interpreter, load_delegate
 
 BufferEntry = namedtuple('BufferEntry', ['cap_time', 'img', 'dets'])
 
@@ -49,23 +51,35 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
 
         model_path = glob(os.path.join(self.MODELS_DIR, self.metadata['model_id'], '*.tflite'))[0]
         label_path = glob(os.path.join(self.MODELS_DIR, self.metadata['model_id'], '*.txt'))[0]
-        self.interpreter = make_interpreter(model_path)
+        if 'yolov5' in self.metadata['model_id']:
+            self.det_func = self.yolo_detect
+            delegate = 'libedgetpu.so.1'
+            self.interpreter = Interpreter(model_path=model_path, experimental_delegates=[load_delegate(delegate)])
+        else:
+            self.det_func = self.detect
+            self.interpreter = make_interpreter(model_path)
         self.interpreter.allocate_tensors()
 
         self.labels = read_label_file(label_path)
         self.ids = {val: key for key, val in self.labels.items()}
+        self.input_details = self.interpreter.get_input_details()
+        self.output_details = self.interpreter.get_output_details()
 
         self.hit_counter = HitCounter()
         self.avg_timer = gen_utils.Averager()
         self.buffer = []
         self.loop_counter = 0
 
+
+
+
+
     def main_func(self, q_item):
         cap_time, img = q_item
         if img == 'MOCK_HIT':
             self.mock_hit_flag = True
             return
-        dets = self.detect(img)
+        dets = self.det_func(img)
         fish_dets, pipe_det = self.filter_dets(dets)
         self.buffer.append(BufferEntry(cap_time, img, fish_dets + pipe_det))
         if self.metadata['source']:
@@ -101,6 +115,22 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.avg_timer.update(time.time() - start)
         return dets
 
+    def yolo_detect(self, img):
+        start = time.time()
+        b, ch, h, w = img.shape
+        img = img.permute(0, 2, 3, 1).cpu().numpy()
+        scale, zero_point = self.input_details[0]['quantization']
+        img = (img / scale + zero_point).astype(np.uint8)
+        self.interpreter.set_tensor(self.input_details[0]['index'], img)
+        self.interpreter.invoke()
+        self.avg_timer.update(time.time() - start)
+        y = self.interpreter.get_tensor(self.output_details[0]['index'])
+        scale, zero_point = self.output_details[0]['quantization']
+        y = (y.astype(np.float32) - zero_point) * scale
+        y[..., :4] *= [w, h, w, h]
+        print(y)
+        return y
+
     def overlay_boxes(self, buffer_entry: BufferEntry):
         """open an image, draw detection boxes, and replace the original image"""     
         draw = ImageDraw.Draw(buffer_entry.img)
@@ -117,7 +147,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         intersect_count = 0
         for det in fish_dets:
             intersect = detect.BBox.intersect(det.bbox, pipe_det[0].bbox)
-            intersect_flag = (intersect.valid and isclose(intersect.area, det.bbox.area))
+            intersect_flag = (intersect.valid and np.isclose(intersect.area, det.bbox.area))
             intersect_count += intersect_flag
             color = 'green' if intersect_flag else 'red'
             overlay_box(det, color)
@@ -147,7 +177,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         pipe_det = pipe_det[0]
         for det in fish_dets:
             intersect = detect.BBox.intersect(det.bbox, pipe_det.bbox)
-            intersect_count += (intersect.valid and isclose(intersect.area, det.bbox.area))
+            intersect_count += (intersect.valid and np.isclose(intersect.area, det.bbox.area))
         if intersect_count < 2:
             return False
         else:
