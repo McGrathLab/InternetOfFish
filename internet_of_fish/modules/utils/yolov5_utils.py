@@ -5,7 +5,7 @@ import numpy as np
 import pycoral.utils.edgetpu as etpu
 from pycoral.adapters import common
 import cv2
-import json
+from PIL import Image
 
 
 def xywh2xyxy(x):
@@ -163,6 +163,8 @@ def get_image_tensor(img, max_size, debug=False):
     """
     if type(img) is str:
         img = cv2.imread(img)
+    if isinstance(img, Image):
+        img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
     resized, pad = resize_and_pad(img, max_size)
     resized = resized.astype(np.float32)
