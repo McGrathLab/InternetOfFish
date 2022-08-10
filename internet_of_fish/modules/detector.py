@@ -51,7 +51,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         label_path = glob(os.path.join(self.MODELS_DIR, self.metadata['model_id'], '*.txt'))[0]
         if 'yolov5' in self.metadata['model_id']:
             from internet_of_fish.modules.utils.yolov5_utils import EdgeTPUModel
-            self.model = EdgeTPUModel(model_path, conf_thresh=self.defs.CONF_THRESH, max_det=self.max_fish)
+            self.model = EdgeTPUModel(model_path, conf_thresh=self.defs.CONF_THRESH, max_det=self.max_fish+1)
             self.det_func = self.yolo_detect
 
         else:

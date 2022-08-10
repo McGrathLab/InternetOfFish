@@ -6,7 +6,8 @@ import pycoral.utils.edgetpu as etpu
 from pycoral.adapters import common
 import cv2
 from PIL import Image
-
+from collections import namedtuple
+from pycoral.adapter.detect import Object, BBox
 
 def xywh2xyxy(x):
     # Convert nx4 boxes from [x, y, w, h] to [x1, y1, x2, y2] where xy1=top-left, xy2=bottom-right
@@ -252,7 +253,12 @@ class EdgeTPUModel:
         full_image, net_image, pad = get_image_tensor(image, self.input_size[0])
         det = self.forward(net_image)[0]
         det[:, :4] = self.get_scaled_coords(det[:, :4], full_image, pad)
-        return det
+        det_objs = []
+        for row in range(len(det)):
+            bbox = BBox
+            bbox.xmin, bbox.ymin, bbox.xmax, bbox.ymax = list(det[row, :4])
+            det_objs.append(Object(id=det[row, 6], score=det[row, 5], bbox=bbox))
+        return det_objs
 
     def forward(self, x: np.ndarray, with_nms=True) -> np.ndarray:
         """
