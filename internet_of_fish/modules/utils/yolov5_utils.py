@@ -1,7 +1,6 @@
 import time
 import os
 
-import yaml
 import numpy as np
 import pycoral.utils.edgetpu as etpu
 from pycoral.adapters import common

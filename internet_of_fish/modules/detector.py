@@ -14,8 +14,6 @@ import internet_of_fish.modules.utils.advanced_utils
 from internet_of_fish.modules import mptools
 from internet_of_fish.modules.utils import gen_utils
 
-from tflite_runtime.interpreter import Interpreter, load_delegate
-
 BufferEntry = namedtuple('BufferEntry', ['cap_time', 'img', 'dets'])
 
 class HitCounter:
