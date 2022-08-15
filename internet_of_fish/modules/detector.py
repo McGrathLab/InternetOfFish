@@ -63,9 +63,9 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
                                   f'contains "pipe" in its file name, and the other contains "fish"')
                 self.event_q.safe_put(mptools.EventMessage(self.name, 'HARD_SHUTDOWN', 'bad model(s)'))
                 return
-            self.interpreter = make_interpreter(fish_model)
+            self.interpreter = make_interpreter(fish_model[0])
             self.interpreter.allocate_tensors()
-            self.pipe_interpreter = make_interpreter(pipe_model)
+            self.pipe_interpreter = make_interpreter(pipe_model[0])
             self.pipe_interpreter.allocate_tensors()
             self.labels = read_label_file(fish_labels)
             self.pipe_labels = read_label_file(pipe_labels)
