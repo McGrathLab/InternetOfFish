@@ -68,10 +68,11 @@ class NotifierWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         return False
 
     def notification_to_sendgrid_message(self, notification: Notification):
+        subject = f'{notification.msg_type}, tank {self.metadata["tank_id"]}'
         message = Mail(
             from_email='themcgrathlab@gmail.com',
             to_emails=self.user_email,
-            subject=notification.msg_type,
+            subject=subject,
             html_content=notification.msg)
         with open(notification.attachment_path, 'rb') as f:
             data = f.read()
