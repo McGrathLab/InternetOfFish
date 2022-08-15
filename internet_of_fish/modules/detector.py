@@ -77,8 +77,11 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             self.logger.info(f"Hit counter reached {self.hit_counter.hits}, possible spawning event")
             img_paths = [self.overlay_boxes(be) for be in self.buffer]
             vid_path = self.jpgs_to_mp4(img_paths)
-            msg = f'possible spawning event in {self.metadata["tank_id"]} at {gen_utils.current_time_iso()}'
-            self.event_q.safe_put(mptools.EventMessage(self.name, 'NOTIFY', ['SPAWNING_EVENT', msg, vid_path]))
+
+            ## uncomment to re-enable spawn notifier
+            # msg = f'possible spawning event in {self.metadata["tank_id"]} at {gen_utils.current_time_iso()}'
+            # self.event_q.safe_put(mptools.EventMessage(self.name, 'NOTIFY', ['SPAWNING_EVENT', msg, vid_path]))
+
             self.hit_counter.reset()
             self.buffer = []
         if len(self.buffer) > self.IMG_BUFFER:
@@ -116,14 +119,17 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         fish_dets, pipe_det = self.filter_dets(buffer_entry.dets)
         intersect_count = 0
         for det in fish_dets:
-            intersect = detect.BBox.intersect(det.bbox, pipe_det[0].bbox)
-            intersect_flag = (intersect.valid and isclose(intersect.area, det.bbox.area))
-            intersect_count += intersect_flag
-            color = 'green' if intersect_flag else 'red'
+            if not pipe_det:
+                color = 'red'
+            else:
+                intersect = detect.BBox.intersect(det.bbox, pipe_det[0].bbox)
+                intersect_flag = (intersect.valid and isclose(intersect.area, det.bbox.area))
+                intersect_count += intersect_flag
+                color = 'green' if intersect_flag else 'red'
             overlay_box(det, color)
-            
-        color = 'red' if not intersect_count else 'yellow' if intersect_count == 1 else 'green'
-        overlay_box(pipe_det[0], color)
+        if pipe_det:
+            color = 'red' if not intersect_count else 'yellow' if intersect_count == 1 else 'green'
+            overlay_box(pipe_det[0], color)
         
         img_path = os.path.join(self.img_dir, f'{buffer_entry.cap_time}.jpg')
         buffer_entry.img.save(img_path)
