@@ -49,15 +49,9 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
 
         model_path = glob(os.path.join(self.MODELS_DIR, self.metadata['model_id'], '*.tflite'))[0]
         label_path = glob(os.path.join(self.MODELS_DIR, self.metadata['model_id'], '*.txt'))[0]
-        if 'yolov5' in self.metadata['model_id']:
-            from internet_of_fish.modules.utils.yolov5_utils import EdgeTPUModel
-            self.model = EdgeTPUModel(model_path, conf_thresh=self.defs.CONF_THRESH, max_det=self.max_fish+1)
-            self.det_func = self.yolo_detect
-
-        else:
-            self.det_func = self.detect
-            self.interpreter = make_interpreter(model_path)
-            self.interpreter.allocate_tensors()
+        self.det_func = self.detect
+        self.interpreter = make_interpreter(model_path)
+        self.interpreter.allocate_tensors()
 
         self.labels = read_label_file(label_path)
         self.ids = {val: key for key, val in self.labels.items()}
@@ -66,9 +60,6 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.avg_timer = gen_utils.Averager()
         self.buffer = []
         self.loop_counter = 0
-
-
-
 
 
     def main_func(self, q_item):
@@ -109,12 +100,6 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             self.interpreter, img.size, lambda size: img.resize(size, Image.ANTIALIAS))
         self.interpreter.invoke()
         dets = detect.get_objects(self.interpreter, self.defs.CONF_THRESH, scale)
-        self.avg_timer.update(time.time() - start)
-        return dets
-
-    def yolo_detect(self, img):
-        start = time.time()
-        dets = self.model.predict(img)
         self.avg_timer.update(time.time() - start)
         return dets
 
