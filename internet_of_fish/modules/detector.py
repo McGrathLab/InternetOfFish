@@ -124,8 +124,11 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         else:
             old_loc = self.pipe_det
             self.pipe_det = sorted(new_loc, reverse=True, key=lambda x: x.score)[:1]
-            iou = detect.BBox.intersect(old_loc[0].bbox, self.pipe_det[0].bbox)
-            self.logger.debug(f'pipe location updated. IOU with previous location of {iou}')
+            if old_loc:
+                iou = detect.BBox.intersect(old_loc[0].bbox, self.pipe_det[0].bbox)
+                self.logger.debug(f'pipe location updated. IOU with previous location of {iou}')
+            else:
+                self.logger.debug(f'pipe location initialized as {self.pipe_det[0].bbox}')
 
     def detect(self, img, interp=None, update_timer=True):
         """run detection on a single image"""
