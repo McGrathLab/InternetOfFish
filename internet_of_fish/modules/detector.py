@@ -52,6 +52,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         label_paths = glob(os.path.join(self.MODELS_DIR, self.metadata['model_id'], '*.txt'))
 
         if len(model_paths) > 1:
+            self.logger.info('initializing detector in multi-network mode')
             self.multinet_mode = True
             fish_model = [m for m in model_paths if 'fish' in os.path.basename(m)]
             pipe_model = [m for m in model_paths if 'pipe' in os.path.basename(m)]
