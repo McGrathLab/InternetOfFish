@@ -255,15 +255,17 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
 
         self.switch_mode('end')
         self.upload_q = self.secondary_ctx.MPQueue()
-        proj_ids = os.listdir(self.defs.DATA_DIR)
+        valid_jsons = glob(os.path.join(definitions.DATA_DIR, '**', '*.json'), recursive=True)
+        proj_ids = [os.path.splitext(os.path.basename(vj))[0] for vj in valid_jsons]
+        analysis_states = [os.path.basename(os.path.dirname(vj)) for vj in valid_jsons]
         if not proj_ids:
             self.logger.info('no remaining data to upload. exiting')
             return
 
         self.logger.info(f'uploading data for: {" ".join(proj_ids)}')
         sp.run(['echo', 'uploading' 'data' 'for:'] + proj_ids)
-        [self.queue_uploads(p, False) for p in proj_ids[:-1]]
-        self.queue_uploads(proj_ids[-1])
+        [self.queue_uploads(pid, ast, False) for pid, ast in list(zip(proj_ids[:-1], analysis_states[:-1]))]
+        self.queue_uploads(proj_ids[-1], analysis_states[-1])
         upload_procs = [self.secondary_ctx.Proc(f'UPLOAD{i + 1}', uploader.EndUploaderWorker, self.upload_q)
                         for i in range(self.MAX_UPLOAD_WORKERS)]
         self.secondary_ctx.stop_procs(upload_procs, stop_wait_secs=3600)
