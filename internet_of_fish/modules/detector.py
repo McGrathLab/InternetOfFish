@@ -196,7 +196,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
 
     def filter_dets(self, dets):
         """keep only the the highest confidence pipe detection, and the top n highest confidence fish detections"""
-        if not self.mulitnet_mode:
+        if not self.multinet_mode:
             fish_dets = [d for d in dets if d.id == self.ids['fish']]
             fish_dets = sorted(fish_dets, reverse=True, key=lambda x: x.score)[:self.max_fish]
             pipe_det = [d for d in dets if d.id == self.ids['pipe']]
