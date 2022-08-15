@@ -67,8 +67,8 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             self.interpreter.allocate_tensors()
             self.pipe_interpreter = make_interpreter(pipe_model[0])
             self.pipe_interpreter.allocate_tensors()
-            self.labels = read_label_file(fish_labels)
-            self.pipe_labels = read_label_file(pipe_labels)
+            self.labels = read_label_file(fish_labels[0])
+            self.pipe_labels = read_label_file(pipe_labels[0])
             self.ids = {val: key for key, val in self.labels.items()}
         else:
             self.multinet_mode = False
