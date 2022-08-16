@@ -301,6 +301,9 @@ class MetaDataDict(MetaDataDictBase):
             'email':       MetaValue(key='email',
                                      prompt='enter your email address',
                                      pattern=my_regexes.any_email),
+            'analysis_state':
+                           MetaValue(key='analysis_state',
+                                     prompt='enter an analysis state to associate this project with'),
             'tank_id':     MetaValue(key='tank_id',
                                      value=platform.node().split('-')[-1].lower(),
                                      prompt='enter the tank id (e.g., t003, t123, t123sv, t123asdf, etc.',
@@ -370,8 +373,9 @@ class MetaDataDict(MetaDataDictBase):
                                    value=lambda: f'{self["owner"]}_{self["tank_id"]}_{self["species"]}'
                                                  f'_{created_shortform}'),
             'json_path': MetaValue(key='json_path',
-                                   value=lambda: os.path.join(definitions.PROJ_DIR(self['proj_id']),
-                                                              f'{self["proj_id"]}.json'))
+                                   value=lambda: os.path.join(
+                                       definitions.PROJ_DIR(self['proj_id'], self['analysis_state']),
+                                       f'{self["proj_id"]}.json'))
         })
 
 
@@ -407,7 +411,7 @@ class MetaDataHandler(MetaDataDict):
         md = self.decode_metadata(self.json_path)
         md.update(kwargs)
         self.quick_update(md)
-        file_utils.create_project_tree(self['proj_id'])
+        file_utils.create_project_tree(self['proj_id'], self['analysis_state'])
         self.verify()
         self.overwrite_json()
         file_utils.upload(self.json_path)
@@ -425,7 +429,7 @@ class MetaDataHandler(MetaDataDict):
         print('the program will now ask you a series of questions in order to generate the metadata json file for \n'
               'this project. At any time, you may type "help" for additional details about a particular parameter\n')
         # essential queries
-        for key in ['owner', 'email', 'species', 'fish_type']:
+        for key in ['owner', 'email', 'analysis_state', 'species', 'fish_type']:
             contents[key].query_user()
 
         # conditional queries
@@ -465,7 +469,7 @@ class MetaDataHandler(MetaDataDict):
                 if key != 'advanced_config':
                     print(f'{key}: {val}')
 
-        file_utils.create_project_tree(self['proj_id'])
+        file_utils.create_project_tree(self['proj_id'], self['analysis_state'])
         with open(self['json_path'], 'w') as f:
             json.dump(self.simplify(infer_types=False), f, indent=2)
             self.logger.info('metadata generated and saved to .json file')
@@ -512,7 +516,7 @@ class MetaDataHandler(MetaDataDict):
         self['species'] = 'na'
         self['fish_type'] = 'other'
         self.set_kill_condition()
-        file_utils.create_project_tree(self['proj_id'])
+        file_utils.create_project_tree(self['proj_id'], self['analysis_state'])
         with open(self['json_path'], 'w') as f:
             json.dump(self.simplify(infer_types=False), f, indent=2)
             self.logger.info('metadata generated and saved to .json file')

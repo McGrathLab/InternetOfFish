@@ -220,13 +220,15 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
         next_start = curr_time.replace(hour=self.defs.START_HOUR, minute=0, second=0, microsecond=0)
         return gen_utils.sleep_secs(600, next_start.timestamp())
 
-    def queue_uploads(self, proj_id=None, queue_end_signals=True):
+    def queue_uploads(self, proj_id=None, analysis_state=None, queue_end_signals=True):
         if not proj_id:
             proj_id = self.metadata['proj_id']
-        proj_dir = definitions.PROJ_DIR(proj_id)
-        proj_log_dir = definitions.PROJ_LOG_DIR(proj_id)
-        proj_vid_dir = definitions.PROJ_VID_DIR(proj_id)
-        proj_img_dir = definitions.PROJ_IMG_DIR(proj_id)
+        if not analysis_state:
+            analysis_state = self.metadata['analysis_state']
+        proj_dir = definitions.PROJ_DIR(proj_id, analysis_state)
+        proj_log_dir = definitions.PROJ_LOG_DIR(proj_id, analysis_state)
+        proj_vid_dir = definitions.PROJ_VID_DIR(proj_id, analysis_state)
+        proj_img_dir = definitions.PROJ_IMG_DIR(proj_id, analysis_state)
 
         if os.path.exists(proj_log_dir):
             shutil.rmtree(proj_log_dir)
@@ -253,15 +255,17 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
 
         self.switch_mode('end')
         self.upload_q = self.secondary_ctx.MPQueue()
-        proj_ids = os.listdir(self.defs.DATA_DIR)
+        valid_jsons = glob(os.path.join(definitions.DATA_DIR, '**', '*.json'), recursive=True)
+        proj_ids = [os.path.splitext(os.path.basename(vj))[0] for vj in valid_jsons]
+        analysis_states = [os.path.basename(os.path.dirname(vj)) for vj in valid_jsons]
         if not proj_ids:
             self.logger.info('no remaining data to upload. exiting')
             return
 
         self.logger.info(f'uploading data for: {" ".join(proj_ids)}')
         sp.run(['echo', 'uploading' 'data' 'for:'] + proj_ids)
-        [self.queue_uploads(p, False) for p in proj_ids[:-1]]
-        self.queue_uploads(proj_ids[-1])
+        [self.queue_uploads(pid, ast, False) for pid, ast in list(zip(proj_ids[:-1], analysis_states[:-1]))]
+        self.queue_uploads(proj_ids[-1], analysis_states[-1])
         upload_procs = [self.secondary_ctx.Proc(f'UPLOAD{i + 1}', uploader.EndUploaderWorker, self.upload_q)
                         for i in range(self.MAX_UPLOAD_WORKERS)]
         self.secondary_ctx.stop_procs(upload_procs, stop_wait_secs=3600)
