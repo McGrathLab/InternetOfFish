@@ -15,13 +15,13 @@ class CollectorWorker(mptools.TimerProcWorker, metaclass=gen_utils.AutologMetacl
         self.INTERVAL_SECS = self.defs.INTERVAL_SECS
         self.RESOLUTION = (self.defs.H_RESOLUTION, self.defs.V_RESOLUTION)  # pi camera resolution
         self.FRAMERATE = self.defs.FRAMERATE  # pi camera framerate
-        self.SPLIT_AM_PM = self.defs.SPLIT_AM_PM
+        self.MAX_VID_LEN = self.defs.MAX_VID_LEN  # max length of an individual video (in hours)
 
     def startup(self):
         self.cam = self.init_camera()
         self.vid_dir = self.defs.PROJ_VID_DIR
         self.cam.start_recording(self.generate_vid_path())
-        self.split_flag = False if dt.datetime.now().hour < 12 else True
+        self.last_split = dt.datetime.now().hour
 
     def main_func(self):
         tries_left = 3
@@ -45,9 +45,9 @@ class CollectorWorker(mptools.TimerProcWorker, metaclass=gen_utils.AutologMetacl
         if not put_result:
             self.INTERVAL_SECS += 0.1
             self.logger.info(f'img_q full, slowing collection interval to {self.INTERVAL_SECS}')
-        if self.SPLIT_AM_PM and (dt.datetime.now().hour >= 12) and not self.split_flag:
+        if self.MAX_VID_LEN and (dt.datetime.now().hour - self.last_split >= self.MAX_VID_LEN):
             self.split_recording()
-            self.split_flag = True
+            self.last_split = dt.datetime.now().hour
 
     def shutdown(self):
         self.cam.stop_recording()
@@ -139,13 +139,13 @@ class SimpleCollectorWorker(CollectorWorker):
         self.INTERVAL_SECS = self.defs.INTERVAL_SECS
         self.RESOLUTION = (self.defs.H_RESOLUTION, self.defs.V_RESOLUTION)  # pi camera resolution
         self.FRAMERATE = self.defs.FRAMERATE  # pi camera framerate
-        self.SPLIT_AM_PM = self.defs.SPLIT_AM_PM
+        self.MAX_VID_LEN = self.defs.MAX_VID_LEN
 
     def main_func(self):
         time.sleep(5)
-        if self.SPLIT_AM_PM and (dt.datetime.now().hour >= 12) and not self.split_flag:
+        if self.MAX_VID_LEN and (dt.datetime.now().hour - self.last_split >= self.MAX_VID_LEN):
             self.split_recording()
-            self.split_flag = True
+            self.last_split = dt.datetime.now().hour
 
     def shutdown(self):
         self.cam.stop_recording()
