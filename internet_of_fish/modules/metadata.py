@@ -232,7 +232,7 @@ class AdvancedConfigDict(MetaDataDictBase):
             'MAX_VID_LEN':
                 MetaValue(key='MAX_VID_LEN',
                           value='3',
-                          pattern=my_regexes.any_bool,
+                          pattern=my_regexes.any_int_less_than_24,
                           help_str='maximum video length in hours. Set to 0 to disable video splitting'),
             'MIN_NOTIFICATION_INTERVAL':
                 MetaValue(key='MIN_NOTIFICATION_INTERVAL',
