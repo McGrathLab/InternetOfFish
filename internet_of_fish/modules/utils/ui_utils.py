@@ -13,7 +13,7 @@ import shutil
 import time
 import subprocess as sp
 import platform
-import glob
+from glob import glob
 
 def check_running_in_screen():
     out = sp.run('echo $TERM', shell=True, capture_output=True, encoding='utf-8')
@@ -35,9 +35,9 @@ def new_project(**kwargs):
           'menu to start data collection')
 
 def existing_projects():
-    proj_ids = [p for p in os.listdir(definitions.DATA_DIR)]
-    json_exists = [os.path.exists(os.path.join(definitions.PROJ_DIR(p), f'{p}.json')) for p in proj_ids]
-    return [proj_ids[i] for i in range(len(proj_ids)) if json_exists[i]]
+    existing_jsons = glob(os.path.join(definitions.DATA_DIR, '**', '*.json'), recursive=True)
+    proj_ids = [os.path.dirname(os.path.basename(j_path)) for j_path in existing_jsons]
+    return proj_ids
 
 
 def active_processes():
@@ -102,9 +102,10 @@ def get_system_info():
 
 
 def change_active_proj(proj_id):
-    json_path = os.path.join(definitions.PROJ_DIR(proj_id), f'{proj_id}.json')
-    if not os.path.exists(json_path):
+    json_path = glob(os.path.join(definitions.DATA_DIR, '**', f'{proj_id}.json'), recursive=True)
+    if not json_path:
         raise FileNotFoundError
+    json_path = json_path[0]
     tmp_json_path = os.path.splitext(json_path)[0] + 'tmp.json'
     shutil.copy(json_path, tmp_json_path)
     os.remove(json_path)
@@ -113,7 +114,10 @@ def change_active_proj(proj_id):
 
 
 def get_project_metadata(proj_id):
-    json_path = os.path.join(definitions.PROJ_DIR(proj_id), f'{proj_id}.json')
+    json_path = glob(os.path.join(definitions.DATA_DIR, '**', f'{proj_id}.json'), recursive=True)
+    if not json_path:
+        raise FileNotFoundError
+    json_path = json_path[0]
     metadata_simple = metadata.MetaDataHandler(new_proj=False, json_path=json_path).simplify(infer_types=False)
     return metadata_simple
 
@@ -140,7 +144,7 @@ def inject_override(event_type: str):
 
 
 def clear_logs():
-    for log in glob.glob(os.path.join(definitions.LOG_DIR, '*.log')):
+    for log in glob(os.path.join(definitions.LOG_DIR, '*.log')):
         os.remove(log)
 
 

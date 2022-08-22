@@ -193,7 +193,9 @@ class ProcWorker(metaclass=gen_utils.AutologMetaclass):
         """
         self.name = name
         self.metadata = metadata
-        self.defs = gen_utils.freeze_definitions(self.metadata['proj_id'], self.metadata['advanced_config'])
+        self.defs = gen_utils.freeze_definitions(self.metadata['proj_id'],
+                                                 self.metadata['analysis_state'],
+                                                 self.metadata['advanced_config'])
         self.MAX_TERMINATE_CALLED = self.defs.MAX_TRIES
         self.logger = gen_utils.make_logger(name)
         self.startup_event = startup_event
@@ -279,7 +281,9 @@ class Proc(metaclass=gen_utils.AutologMetaclass):
 
     def __init__(self, name, worker_class, shutdown_event, event_q, metadata, *args):
         self.metadata = metadata
-        self.defs = gen_utils.freeze_definitions(self.metadata['proj_id'], self.metadata['advanced_config'])
+        self.defs = gen_utils.freeze_definitions(self.metadata['proj_id'],
+                                                 self.metadata['analysis_state'],
+                                                 self.metadata['advanced_config'])
         self.STARTUP_WAIT_SECS = self.defs.DEFAULT_STARTUP_WAIT_SECS
         self.SHUTDOWN_WAIT_SECS = self.defs.DEFAULT_SHUTDOWN_WAIT_SECS
         self.logger = gen_utils.make_logger(name)
@@ -334,7 +338,9 @@ class MainContext(metaclass=gen_utils.AutologMetaclass):
 
     def __init__(self, metadata: dict):
         self.metadata = metadata
-        self.defs = gen_utils.freeze_definitions(self.metadata['proj_id'], self.metadata['advanced_config'])
+        self.defs = gen_utils.freeze_definitions(self.metadata['proj_id'],
+                                                 self.metadata['analysis_state'],
+                                                 self.metadata['advanced_config'])
         self.STOP_WAIT_SECS = self.defs.DEFAULT_SHUTDOWN_WAIT_SECS
         self.procs = []
         self.queues = []

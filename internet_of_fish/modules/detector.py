@@ -3,18 +3,18 @@ from collections import namedtuple
 
 from PIL import Image, ImageDraw
 from glob import glob
-from numpy import isclose
+import numpy as np
 
 from pycoral.adapters import common
 from pycoral.adapters import detect
 from pycoral.utils.dataset import read_label_file
 from pycoral.utils.edgetpu import make_interpreter
 
-import internet_of_fish.modules.advanced_utils
+import internet_of_fish.modules.utils.advanced_utils
 from internet_of_fish.modules import mptools
 from internet_of_fish.modules.utils import gen_utils
 
-BufferEntry = namedtuple('BufferEntry', ['cap_time', 'img', 'dets'])
+BufferEntry = namedtuple('BufferEntry', ['cap_time', 'img', 'fish_dets', 'pipe_det'])
 
 class HitCounter:
 
@@ -44,30 +44,56 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
 
     def startup(self):
         self.mock_hit_flag = False
+        self.pipe_det = []
         self.max_fish = self.metadata['n_fish'] if self.metadata['n_fish'] else self.defs.MAX_DETS
         self.img_dir = self.defs.PROJ_IMG_DIR
 
-        model_path = glob(os.path.join(self.MODELS_DIR, self.metadata['model_id'], '*.tflite'))[0]
-        label_path = glob(os.path.join(self.MODELS_DIR, self.metadata['model_id'], '*.txt'))[0]
-        self.interpreter = make_interpreter(model_path)
-        self.interpreter.allocate_tensors()
+        model_paths = glob(os.path.join(self.MODELS_DIR, self.metadata['model_id'], '*.tflite'))
+        label_paths = glob(os.path.join(self.MODELS_DIR, self.metadata['model_id'], '*.txt'))
 
-        self.labels = read_label_file(label_path)
-        self.ids = {val: key for key, val in self.labels.items()}
+        if len(model_paths) > 1:
+            self.logger.info('initializing detector in multi-network mode')
+            self.multinet_mode = True
+            fish_model = [m for m in model_paths if 'fish' in os.path.basename(m)]
+            pipe_model = [m for m in model_paths if 'pipe' in os.path.basename(m)]
+            fish_labels = [m for m in label_paths if 'fish' in os.path.basename(m)]
+            pipe_labels = [m for m in label_paths if 'pipe' in os.path.basename(m)]
+            if not fish_model or not pipe_model:
+                self.logger.error(f'multiple tflite files encountered in {self.metadata["model_id"]}, but unable to'
+                                  f'determine which is the pipe model and which is the fish model. Ensure one model'
+                                  f'contains "pipe" in its file name, and the other contains "fish"')
+                self.event_q.safe_put(mptools.EventMessage(self.name, 'HARD_SHUTDOWN', 'bad model(s)'))
+                return
+            self.interpreter = make_interpreter(fish_model[0])
+            self.interpreter.allocate_tensors()
+            self.pipe_interpreter = make_interpreter(pipe_model[0])
+            self.pipe_interpreter.allocate_tensors()
+            self.labels = read_label_file(fish_labels[0])
+            self.pipe_labels = read_label_file(pipe_labels[0])
+            self.ids = {val: key for key, val in self.labels.items()}
+        else:
+            self.multinet_mode = False
+            self.interpreter = make_interpreter(model_paths[0])
+            self.interpreter.allocate_tensors()
+            self.labels = read_label_file(label_paths[0])
+            self.ids = {val: key for key, val in self.labels.items()}
 
         self.hit_counter = HitCounter()
         self.avg_timer = gen_utils.Averager()
         self.buffer = []
         self.loop_counter = 0
 
+
     def main_func(self, q_item):
         cap_time, img = q_item
+        if self.multinet_mode and not self.loop_counter % 100:
+            self.update_pipe_location(img)
         if img == 'MOCK_HIT':
             self.mock_hit_flag = True
             return
         dets = self.detect(img)
         fish_dets, pipe_det = self.filter_dets(dets)
-        self.buffer.append(BufferEntry(cap_time, img, fish_dets + pipe_det))
+        self.buffer.append(BufferEntry(cap_time, img, fish_dets, pipe_det))
         if self.metadata['source']:
             self.overlay_boxes(self.buffer[-1])
         hit_flag = self.check_for_hit(fish_dets, pipe_det)
@@ -78,9 +104,9 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             img_paths = [self.overlay_boxes(be) for be in self.buffer]
             vid_path = self.jpgs_to_mp4(img_paths)
 
-            ## uncomment to re-enable spawn notifier
-            # msg = f'possible spawning event in {self.metadata["tank_id"]} at {gen_utils.current_time_iso()}'
-            # self.event_q.safe_put(mptools.EventMessage(self.name, 'NOTIFY', ['SPAWNING_EVENT', msg, vid_path]))
+            # comment the next two lines to disable spawning notifications
+            msg = f'possible spawning event in {self.metadata["tank_id"]} at {gen_utils.current_time_iso()}'
+            self.event_q.safe_put(mptools.EventMessage(self.name, 'NOTIFY', ['SPAWNING_EVENT', msg, vid_path]))
 
             self.hit_counter.reset()
             self.buffer = []
@@ -94,14 +120,30 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             self.logger.info(f'{self.loop_counter} detection loops completed. current average detection time is '
                              f'{self.avg_timer.avg * 1000}ms')
 
-    def detect(self, img):
+    def update_pipe_location(self, img):
+        new_loc = self.detect(img, interp=self.pipe_interpreter, update_timer=False)
+        if not new_loc:
+            self.logger.debug('attempted to update pipe location but pipe was not detected. keeping old location')
+            return
+        else:
+            old_loc = self.pipe_det
+            self.pipe_det = sorted(new_loc, reverse=True, key=lambda x: x.score)[:1]
+            if old_loc:
+                iou = detect.BBox.intersect(old_loc[0].bbox, self.pipe_det[0].bbox)
+                self.logger.debug(f'pipe location updated. IOU with previous location of {iou}')
+            else:
+                self.logger.debug(f'pipe location initialized as {self.pipe_det[0].bbox}')
+
+    def detect(self, img, interp=None, update_timer=True):
         """run detection on a single image"""
+        if not interp:
+            interp = self.interpreter
         start = time.time()
-        _, scale = common.set_resized_input(
-            self.interpreter, img.size, lambda size: img.resize(size, Image.ANTIALIAS))
-        self.interpreter.invoke()
-        dets = detect.get_objects(self.interpreter, self.defs.CONF_THRESH, scale)
-        self.avg_timer.update(time.time() - start)
+        _, scale = common.set_resized_input(interp, img.size, lambda size: img.resize(size, Image.ANTIALIAS))
+        interp.invoke()
+        dets = detect.get_objects(interp, self.defs.CONF_THRESH, scale)
+        if update_timer:
+            self.avg_timer.update(time.time() - start)
         return dets
 
     def overlay_boxes(self, buffer_entry: BufferEntry):
@@ -116,14 +158,14 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
                       '%s\n%.2f' % (self.labels.get(det_.id, det_.id), det_.score),
                       fill=color_)
             
-        fish_dets, pipe_det = self.filter_dets(buffer_entry.dets)
+        fish_dets, pipe_det =(buffer_entry.fish_dets, buffer_entry.pipe_det)
         intersect_count = 0
         for det in fish_dets:
             if not pipe_det:
                 color = 'red'
             else:
                 intersect = detect.BBox.intersect(det.bbox, pipe_det[0].bbox)
-                intersect_flag = (intersect.valid and isclose(intersect.area, det.bbox.area))
+                intersect_flag = (intersect.valid and np.isclose(intersect.area, det.bbox.area))
                 intersect_count += intersect_flag
                 color = 'green' if intersect_flag else 'red'
             overlay_box(det, color)
@@ -140,7 +182,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         if not img_paths:
             return
         dest_dir = self.defs.PROJ_VID_DIR
-        vid_path = internet_of_fish.modules.advanced_utils.jpgs_to_mp4(img_paths, dest_dir, 1//self.defs.INTERVAL_SECS)
+        vid_path = internet_of_fish.modules.utils.advanced_utils.jpgs_to_mp4(img_paths, dest_dir, 1 // self.defs.INTERVAL_SECS)
         if delete_jpgs:
             [os.remove(x) for x in img_paths]
         return vid_path
@@ -153,7 +195,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         pipe_det = pipe_det[0]
         for det in fish_dets:
             intersect = detect.BBox.intersect(det.bbox, pipe_det.bbox)
-            intersect_count += (intersect.valid and isclose(intersect.area, det.bbox.area))
+            intersect_count += (intersect.valid and np.isclose(intersect.area, det.bbox.area))
         if intersect_count < 2:
             return False
         else:
@@ -161,9 +203,16 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
 
     def filter_dets(self, dets):
         """keep only the the highest confidence pipe detection, and the top n highest confidence fish detections"""
-        fish_dets = [d for d in dets if d.id == self.ids['fish']][:self.max_fish]
-        pipe_det = [d for d in dets if d.id == self.ids['pipe']][:1]
-        return fish_dets, pipe_det
+        if not self.multinet_mode:
+            fish_dets = [d for d in dets if d.id == self.ids['fish']]
+            fish_dets = sorted(fish_dets, reverse=True, key=lambda x: x.score)[:self.max_fish]
+            pipe_det = [d for d in dets if d.id == self.ids['pipe']]
+            pipe_det = sorted(pipe_det, reverse=True, key=lambda x: x.score)[:1]
+            return fish_dets, pipe_det
+        else:
+            return sorted(dets, reverse=True, key=lambda x: x.score)[:self.max_fish], self.pipe_det
+
+
 
     def shutdown(self):
         if self.avg_timer.avg:

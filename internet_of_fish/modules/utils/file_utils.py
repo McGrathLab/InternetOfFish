@@ -3,17 +3,14 @@ import os
 import pathlib
 import subprocess as sp
 import json
+from glob import glob
 
 from internet_of_fish.modules import definitions
 
 
 def locate_newest_json():
-    try:
-        potential_projects = next(os.walk(definitions.DATA_DIR))[1]
-    except StopIteration:
-        return None, None
-    potential_jsons = [os.path.join(definitions.PROJ_DIR(pp), f'{pp}.json') for pp in potential_projects]
-    json_path = sorted([pj for pj in potential_jsons if os.path.exists(pj)], key=os.path.getctime)[-1]
+    potential_jsons = glob(os.path.join(definitions.DATA_DIR, '**', '*.json'), recursive=True)
+    json_path = sorted(potential_jsons, key=os.path.getctime)[-1]
     ctime = datetime.datetime.fromtimestamp(os.path.getctime(json_path)).isoformat()
     return json_path, ctime
 
@@ -32,12 +29,12 @@ def remove_empty_dirs(parent_dir, remove_root=False):
         os.rmdir(parent_dir)
 
 
-def create_project_tree(proj_id):
+def create_project_tree(proj_id, analysis_state):
     for dir_func in [definitions.PROJ_DIR,
                      definitions.PROJ_IMG_DIR,
                      definitions.PROJ_VID_DIR,
                      definitions.PROJ_LOG_DIR]:
-        path = dir_func(proj_id)
+        path = dir_func(proj_id, analysis_state)
         if not os.path.exists(path):
             os.makedirs(path)
 
@@ -78,13 +75,15 @@ def download(cloud_path=None):
     return out
 
 
-def download_json(proj_id=None):
+def download_json(proj_id=None, analysis_state=None):
     if not proj_id:
         proj_id = input('enter the project id:  ')
-        while not exists_cloud(definitions.PROJ_JSON_FILE(proj_id)):
-            print('invalid project id, please try again')
+        analysis_state = input('enter the analysis state:  ')
+        while not exists_cloud(definitions.PROJ_JSON_FILE(proj_id, analysis_state)):
+            print('invalid project id analysis state pair, please try again')
             proj_id = input('enter the project id:  ')
-    local_json_path = definitions.PROJ_JSON_FILE(proj_id)
+            analysis_state = input('enter the analysis state:  ')
+    local_json_path = definitions.PROJ_JSON_FILE(proj_id, analysis_state)
     download(local_to_cloud(local_json_path))
     with open(local_json_path, 'r') as f:
         source = json.load(f)['source']
