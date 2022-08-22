@@ -24,12 +24,22 @@ class CollectorWorker(mptools.TimerProcWorker, metaclass=gen_utils.AutologMetacl
         self.split_flag = False if dt.datetime.now().hour < 12 else True
 
     def main_func(self):
-        cap_time = gen_utils.current_time_ms()
-        stream = io.BytesIO()
-        self.cam.capture(stream, format='jpeg', use_video_port=True)
-        stream.seek(0)
-        img = Image.open(stream)
-        img.load()
+        tries_left = 3
+        while tries_left:
+            cap_time = gen_utils.current_time_ms()
+            stream = io.BytesIO()
+            self.cam.capture(stream, format='jpeg', use_video_port=True)
+            stream.seek(0)
+            img = Image.open(stream)
+            try:
+                img.load()
+                break
+            except IOError as e:
+                self.logger.warning(f'unable to read image stream, {tries_left} attempts remaining')
+                tries_left -= 1
+        if not tries_left:
+            self.logger.error(f'failed to read image stream 3 consecutive times. Shutting down')
+            raise e
         put_result = self.img_q.safe_put((cap_time, img))
         stream.close()
         if not put_result:
