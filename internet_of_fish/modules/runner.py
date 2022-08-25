@@ -255,7 +255,7 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
 
         self.switch_mode('end')
         self.upload_q = self.secondary_ctx.MPQueue()
-        valid_jsons = glob(os.path.join(definitions.DATA_DIR, '**', '*.json'), recursive=True)
+        valid_jsons = glob.glob(os.path.join(definitions.DATA_DIR, '**', '*.json'), recursive=True)
         proj_ids = [os.path.splitext(os.path.basename(vj))[0] for vj in valid_jsons]
         analysis_states = [os.path.basename(os.path.dirname(vj)) for vj in valid_jsons]
         if not proj_ids:
