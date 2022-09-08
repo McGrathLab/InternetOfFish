@@ -221,12 +221,12 @@ class AdvancedConfigDict(MetaDataDictBase):
                           help_str='length of video, in seconds, that will be saved when a hit occurs'),
             'START_HOUR':
                 MetaValue(key='START_HOUR',
-                          value='8',
+                          value='7',
                           pattern=my_regexes.any_int_less_than_24,
                           help_str='daily collection start time. e.g., set to 8 to start at 8am'),
             'END_HOUR':
                 MetaValue(key='END_HOUR',
-                          value='18',
+                          value='19',
                           pattern=my_regexes.any_int_less_than_24,
                           help_str='daily collection end time. e.g., set to 19 to end at 7pm'),
             'MAX_VID_LEN':
