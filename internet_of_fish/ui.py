@@ -199,6 +199,8 @@ class UI:
             print('cannot start a project that does not exist. Try selecting "create a new project" instead')
             return
         self.main_ctx = mptools.MainContext(metadata.MetaDataHandler(new_proj=False).simplify())
+        if self.main_ctx.metadata['source']:
+            file_utils.download_json(self.main_ctx.metadata['proj_id'], self.main_ctx.metadata['analysis_state'])
         mptools.init_signals(self.main_ctx.shutdown_event, mptools.default_signal_handler, mptools.default_signal_handler)
         self.main_ctx.Proc('RUN', runner.RunnerWorker, self.main_ctx)
         print(f'{self.main_ctx.metadata["proj_id"]} is now running in the background')
