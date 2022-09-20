@@ -102,7 +102,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.print_info()
 
     def crop_img(self, img):
-        return img.crop([self.pipe_det.xmin, self.pipe_det.ymin, self.pipe_det.xmax, self.pipe_det.ymax])
+        return img.crop([self.pipe_det.bbox.xmin, self.pipe_det.bbox.ymin, self.pipe_det.bbox.xmax, self.pipe_det.bbox.ymax])
 
 
     def print_info(self):
