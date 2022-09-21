@@ -41,11 +41,13 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.DATA_DIR = self.defs.DATA_DIR
         self.HIT_THRESH = self.defs.HIT_THRESH_SECS / self.defs.INTERVAL_SECS
         self.IMG_BUFFER = self.defs.IMG_BUFFER_SECS / self.defs.INTERVAL_SECS
+        self.SAVE_INTERVAL = 60  # minimum interval between images saved for annotation
 
     def startup(self):
         self.pipe_det = None
         self.max_fish = self.metadata['n_fish'] if self.metadata['n_fish'] else self.defs.MAX_DETS
         self.img_dir = self.defs.PROJ_IMG_DIR
+        self.anno_dir = self.defs.PROJ_ANNO_DIR
 
         model_paths = glob(os.path.join(self.MODELS_DIR, self.metadata['model_id'], '*.tflite'))
         label_paths = glob(os.path.join(self.MODELS_DIR, self.metadata['model_id'], '*.txt'))
@@ -72,6 +74,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.avg_timer = gen_utils.Averager()
         self.buffer = []
         self.loop_counter = 0
+        self.last_save = time.time()
 
 
     def main_func(self, q_item):
@@ -84,6 +87,8 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         fish_dets = self.detect(img)
         self.buffer.append(BufferEntry(cap_time, img, fish_dets))
         hit_flag = len(fish_dets) >= 2
+        if (len(fish_dets) >= 1) and (time.time() - self.last_save >= self.SAVE_INTERVAL):
+            self.save_for_anno(img, cap_time)
         self.hit_counter.increment() if hit_flag else self.hit_counter.decrement()
         if self.hit_counter.hits >= self.HIT_THRESH:
             self.logger.info(f"Hit counter reached {self.hit_counter.hits}, possible spawning event")
@@ -106,6 +111,9 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
     def crop_img(self, img):
         return img.crop([self.pipe_det.bbox.xmin, self.pipe_det.bbox.ymin, self.pipe_det.bbox.xmax, self.pipe_det.bbox.ymax])
 
+    def save_for_anno(self, img, cap_time):
+        img_path = os.path.join(self.anno_dir, f'{cap_time}.jpg')
+        img.save(img_path)
 
     def print_info(self):
         if not self.loop_counter % 100:
