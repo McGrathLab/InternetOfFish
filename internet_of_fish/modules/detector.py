@@ -92,7 +92,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             return
         orig_img = cv2.resize(img, self.inference_size)
         inf_img = cv2.cvtColor(orig_img, cv2.COLOR_BGR2RGB)
-        if self.multinet_mode and not self.loop_counter % 100:
+        if self.multinet_mode and (not self.loop_counter % 100) or (not self.pipe_det):
             self.update_pipe_location(inf_img)
         dets = self.detect(inf_img)
         fish_dets, pipe_det = self.filter_dets(dets)
