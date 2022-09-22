@@ -106,8 +106,8 @@ class SourceCollectorWorker(CollectorWorker):
             self.locate_video()
         self.cap = cv2.VideoCapture(self.video_file)
         self.RESOLUTION = (int(self.cap.get(3)), int(self.cap.get(4)))
-        self.FRAMERATE = self.cap.get(cv2.CAP_PROP_FPS)
-        self.cap_rate = max(1, int(self.cap.get(cv2.CAP_PROP_FPS) * ))
+        self.FRAMERATE = int(self.cap.get(cv2.CAP_PROP_FPS))
+        self.cap_rate = max(1, self.FRAMERATE * self.INTERVAL_SECS)
         self.logger.log(logging.INFO, f"Collector will add an image to the queue every {self.cap_rate} frame(s)")
         self.frame_count = 0
         self.active = True
