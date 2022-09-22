@@ -8,7 +8,7 @@ import cv2
 from pycoral.adapters import common
 from pycoral.adapters import detect
 from pycoral.utils.dataset import read_label_file
-from pycoral.utils.edgetpu import make_interpreter, run_inference
+from pycoral.utils.edgetpu import make_interpreter
 
 import internet_of_fish.modules.utils.advanced_utils
 from internet_of_fish.modules import mptools
@@ -64,8 +64,10 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
                                   f'contains "pipe" in its file name, and the other contains "fish"')
                 self.event_q.safe_put(mptools.EventMessage(self.name, 'HARD_SHUTDOWN', 'bad model(s)'))
                 return
+            self.logger.debug(f'using {fish_model[0]} as fish model')
             self.interpreter = make_interpreter(fish_model[0])
             self.interpreter.allocate_tensors()
+            self.logger.debug(f'using {pipe_model[0]} as pipe model')
             self.pipe_interpreter = make_interpreter(pipe_model[0])
             self.pipe_interpreter.allocate_tensors()
             self.labels = read_label_file(fish_labels[0])
@@ -78,7 +80,6 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             self.labels = read_label_file(label_paths[0])
             self.ids = {val: key for key, val in self.labels.items()}
 
-        self.inference_size = common.input_size(self.interpreter)
         self.hit_counter = HitCounter()
         self.avg_timer = gen_utils.Averager()
         self.buffer = []
@@ -90,13 +91,11 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         if isinstance(img, str) and (img == 'MOCK_HIT'):
             self.mock_hit_flag = True
             return
-        orig_img = cv2.resize(img, self.inference_size)
-        inf_img = cv2.cvtColor(orig_img, cv2.COLOR_BGR2RGB)
         if self.multinet_mode and (not self.loop_counter % 100) or (not self.pipe_det):
-            self.update_pipe_location(inf_img)
-        dets = self.detect(inf_img)
+            self.update_pipe_location(img)
+        dets = self.detect(img)
         fish_dets, pipe_det = self.filter_dets(dets)
-        self.buffer.append(BufferEntry(cap_time, orig_img, fish_dets, pipe_det))
+        self.buffer.append(BufferEntry(cap_time, img, fish_dets, pipe_det))
         if self.metadata['source']:
             self.overlay_boxes(self.buffer[-1])
         hit_flag = self.check_for_hit(fish_dets, pipe_det)
@@ -143,10 +142,10 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         if not interp:
             interp = self.interpreter
         start = time.time()
-        # _, scale = common.set_resized_input(interp, img.size, lambda size: img.resize(size, Image.ANTIALIAS))
-        # interp.invoke()
-        run_inference(interp, img.tobytes())
-        dets = detect.get_objects(interp, self.defs.CONF_THRESH)
+        _, scale = common.set_resized_input(
+            interp, img.shape, lambda size: cv2.cvtColor(cv2.resize(img, size), cv2.COLOR_BGR2RGB).to_bytes())
+        interp.invoke()
+        dets = detect.get_objects(interp, self.defs.CONF_THRESH, scale)
         if update_timer:
             self.avg_timer.update(time.time() - start)
         return dets
