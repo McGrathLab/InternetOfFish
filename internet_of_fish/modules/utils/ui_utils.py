@@ -144,7 +144,7 @@ def inject_override(event_type: str):
 
 
 def clear_logs():
-    for log in glob(os.path.join(definitions.LOG_DIR, '*.log')):
+    for log in glob(os.path.join(definitions.LOG_DIR, '*.log*')):
         os.remove(log)
 
 
