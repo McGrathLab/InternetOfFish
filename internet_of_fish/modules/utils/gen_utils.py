@@ -283,6 +283,10 @@ class Averager:
             self.avg = ((self.avg * self.count) + val) / (self.count + 1)
         self.count += 1
 
+    def reset(self):
+        self.avg = None
+        self.count = 0
+
 
 
 

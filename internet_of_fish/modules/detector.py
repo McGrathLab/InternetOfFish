@@ -119,9 +119,10 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.print_info()
 
     def print_info(self):
-        if not self.loop_counter % 100:
-            self.logger.info(f'{self.loop_counter} detection loops completed. current average detection time is '
-                             f'{self.avg_timer.avg * 1000}ms')
+        if self.loop_counter == 1 or self.loop_counter == 10 or not self.loop_counter % 100:
+            self.logger.info(f'{self.loop_counter} detection loops completed. average deteciton time for last '
+                             f'{self.avg_timer.count} loops was {self.avg_timer.avg * 1000}ms')
+            self.avg_timer.reset()
 
     def update_pipe_location(self, img):
         new_loc = self.detect(img, interp=self.pipe_interpreter, update_timer=False)
