@@ -176,7 +176,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             overlay_box(buffer_entry.img, pipe_det[0], color)
         
         img_path = os.path.join(self.img_dir, f'{buffer_entry.cap_time}.jpg')
-        buffer_entry.img.save(img_path)
+        cv2.imwrite(img_path, buffer_entry.img)
         return img_path
 
     def jpgs_to_mp4(self, img_paths, delete_jpgs=True):
