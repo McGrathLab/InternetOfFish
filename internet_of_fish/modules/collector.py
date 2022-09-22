@@ -118,8 +118,8 @@ class SourceCollectorWorker(CollectorWorker):
             return
         cap_time = gen_utils.current_time_ms()
         ret, img = self.cap.read()
-        img = cv2.resize(img, (img.shape[1]//2, img.shape[0]//2))
         if ret:
+            img = cv2.resize(img, (img.shape[1]//2, img.shape[0]//2))
             # img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
             put_result = self.img_q.safe_put((cap_time, img))
             while not put_result:
