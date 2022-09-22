@@ -75,7 +75,7 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
             self.logger.info(f'{event.msg_type.title()} event received. Rebooting machine')
             note = notifier.Notification(event.msg_src, event.msg_type, event.msg, self.defs.SUMMARY_LOG_FILE)
             self.main_ctx.notification_q.safe_put(note)
-            sp.run(['sudo', 'shutdown', '-r', '+5'])
+            # sp.run(['sudo', 'shutdown', '-r', '+5'])
             self.hard_shutdown()
         elif event.msg_type == 'HARD_SHUTDOWN':
             self.logger.info(f'{event.msg_type} event received. Executing hard shutdown')

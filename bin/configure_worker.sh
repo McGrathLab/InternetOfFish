@@ -5,10 +5,16 @@ cd ~/InternetOfFish
 git reset --hard HEAD
 git pull
 # install requirements
+curl https://rclone.org/install.sh | sudo bash
+sudo apt-get update
+sudo apt-get -y install python3.7-dev
+sudo apt-get -y install screen
 sudo apt install python3-opencv
 sudo pip3 install sendgrid
-sudo apt-get -y install screen
-curl https://rclone.org/install.sh | sudo bash
+sudo pip3 install colorama
+sudo pip3 install psutil
+
+
 #echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list
 #curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
 #sudo apt-get update
