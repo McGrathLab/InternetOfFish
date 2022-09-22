@@ -19,17 +19,18 @@ BufferEntry = namedtuple('BufferEntry', ['cap_time', 'img', 'fish_dets', 'pipe_d
 class HitCounter:
 
     def __init__(self):
-        self.hits = 0
+        self.hits = 0.0
+        self.decay_rate = 0.5
+        self.growth_rate = 1.0
 
     def increment(self):
-        self.hits += 1
+        self.hits += (1.0 * self.growth_rate)
 
     def decrement(self):
-        if self.hits > 0:
-            self.hits -= 1
+        self.hits = max(0.0, self.growth_rate - (1 * self.decay_rate))
 
     def reset(self):
-        self.hits = 0
+        self.hits = 0.0
 
 
 class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetaclass):
@@ -96,8 +97,8 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         dets = self.detect(img)
         fish_dets, pipe_det = self.filter_dets(dets)
         self.buffer.append(BufferEntry(cap_time, img, fish_dets, pipe_det))
-        if self.metadata['source']:
-            self.overlay_boxes(self.buffer[-1])
+        # if self.metadata['source']:
+        #     self.overlay_boxes(self.buffer[-1])
         hit_flag = self.check_for_hit(fish_dets, pipe_det)
         self.hit_counter.increment() if hit_flag else self.hit_counter.decrement()
         if self.mock_hit_flag or (self.hit_counter.hits >= self.HIT_THRESH):
