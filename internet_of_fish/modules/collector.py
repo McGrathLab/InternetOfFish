@@ -37,6 +37,7 @@ class CollectorWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
         ret, img = self.cap.read()
         self.writer.write(img)
         if cap_time - self.last_det >= self.INTERVAL_MSECS:
+            img = cv2.resize(img, (img.shape[1]//2, img.shape[0]//2))
             self.img_q.safe_put((cap_time, img))
         if self.MAX_VID_LEN and (dt.datetime.now().hour - self.last_split >= self.MAX_VID_LEN):
             self.split_recording()
@@ -116,15 +117,16 @@ class SourceCollectorWorker(CollectorWorker):
             time.sleep(1)
             return
         cap_time = gen_utils.current_time_ms()
-        ret, frame = self.cap.read()
+        ret, img = self.cap.read()
+        img = cv2.resize(img, (img.shape[1]//2, img.shape[0]//2))
         if ret:
-            # img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-            put_result = self.img_q.safe_put((cap_time, frame))
+            # img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+            put_result = self.img_q.safe_put((cap_time, img))
             while not put_result:
                 self.INTERVAL_SECS += 0.1
                 self.logger.debug(f'img_q full, increasing loop interval to {self.INTERVAL_SECS}')
                 time.sleep(self.INTERVAL_SECS)
-                put_result = self.img_q.safe_put((cap_time, frame))
+                put_result = self.img_q.safe_put((cap_time, img))
             self.frame_count += self.cap_rate
             self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.frame_count)
             time.sleep(self.INTERVAL_SECS)
