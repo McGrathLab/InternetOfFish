@@ -235,7 +235,7 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
         shutil.copytree(self.defs.LOG_DIR, proj_log_dir)
 
         upload_list = []
-        upload_list.extend(glob.glob(os.path.join(proj_log_dir, '*.log')))
+        upload_list.extend(glob.glob(os.path.join(proj_log_dir, '*.log*')))
         upload_list.extend(glob.glob(os.path.join(proj_vid_dir, '*.h264')))
         upload_list.extend(glob.glob(os.path.join(proj_vid_dir, '*.mp4')))
         upload_list.extend(glob.glob(os.path.join(proj_vid_dir, '*.avi')))
