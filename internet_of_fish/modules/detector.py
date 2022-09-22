@@ -142,6 +142,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         if not interp:
             interp = self.interpreter
         start = time.time()
+        print(img.shape)
         _, scale = common.set_resized_input(
             interp, img.shape[:2], lambda size: cv2.cvtColor(cv2.resize(img, size), cv2.COLOR_BGR2RGB).tobytes())
         interp.invoke()
