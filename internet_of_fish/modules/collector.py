@@ -14,12 +14,12 @@ class CollectorWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
         self.INTERVAL_MSECS = self.defs.INTERVAL_SECS * 1000
         # self.RESOLUTION = (self.defs.H_RESOLUTION, self.defs.V_RESOLUTION)  # pi camera resolution
         self.FRAMERATE = self.defs.FRAMERATE  # pi camera framerate
-        self.RESOLUTION = (int(self.cap.get(3)), int(self.cap.get(4)))
         self.MAX_VID_LEN = self.defs.MAX_VID_LEN  # max length of an individual video (in hours)
 
     def startup(self):
         # self.cam = self.init_camera()
-        self.cap = cv2.VideoCapture(0)
+        self.cap = self.get_cap_obj()
+        self.RESOLUTION = (int(self.cap.get(3)), int(self.cap.get(4)))
         self.vid_dir = self.defs.PROJ_VID_DIR
         self.writer = cv2.VideoWriter(self.generate_vid_path(),
                                       cv2.VideoWriter_fourcc(*'XVID'),
@@ -28,6 +28,9 @@ class CollectorWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
         # self.cam.start_recording(self.generate_vid_path())
         self.last_split = dt.datetime.now().hour
         self.last_det = gen_utils.current_time_ms()
+
+    def get_cap_obj(self):
+        return cv2.VideoCapture(0)
 
     def main_func(self):
         cap_time = gen_utils.current_time_ms()
@@ -94,14 +97,17 @@ class SourceCollectorWorker(CollectorWorker):
 
     def init_args(self, args):
         self.img_q, self.video_file = args
-        self.VIRTUAL_INTERVAL_SECS = self.defs.INTERVAL_SECS
-        self.INTERVAL_SECS = 0.1
+        self.INTERVAL_SECS = self.defs.INTERVAL_SECS
+        self.INTERVAL_MSECS = self.INTERVAL_SECS * 1000
+        self.MAX_VID_LEN = self.defs.MAX_VID_LEN  # max length of an individual video (in hours)
 
     def startup(self):
         if not os.path.exists(self.video_file):
             self.locate_video()
-        self.cam = cv2.VideoCapture(self.video_file)
-        self.cap_rate = max(1, int(self.cam.get(cv2.CAP_PROP_FPS) * self.VIRTUAL_INTERVAL_SECS))
+        self.cap = cv2.VideoCapture(self.video_file)
+        self.RESOLUTION = (int(self.cap.get(3)), int(self.cap.get(4)))
+        self.FRAMERATE = self.cap.get(cv2.CAP_PROP_FPS)
+        self.cap_rate = max(1, int(self.cap.get(cv2.CAP_PROP_FPS) * ))
         self.logger.log(logging.INFO, f"Collector will add an image to the queue every {self.cap_rate} frame(s)")
         self.frame_count = 0
         self.active = True
@@ -111,7 +117,7 @@ class SourceCollectorWorker(CollectorWorker):
             time.sleep(1)
             return
         cap_time = gen_utils.current_time_ms()
-        ret, frame = self.cam.read()
+        ret, frame = self.cap.read()
         if ret:
             # img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
             put_result = self.img_q.safe_put((cap_time, frame))
@@ -121,7 +127,8 @@ class SourceCollectorWorker(CollectorWorker):
                 time.sleep(self.INTERVAL_SECS)
                 put_result = self.img_q.safe_put((cap_time, frame))
             self.frame_count += self.cap_rate
-            self.cam.set(cv2.CAP_PROP_POS_FRAMES, self.frame_count)
+            self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.frame_count)
+            time.sleep(self.INTERVAL_SECS)
         else:
             self.active = False
             self.logger.log(logging.INFO, "VideoCollector entering sleep mode (no more frames to process)")
@@ -146,6 +153,7 @@ class SourceCollectorWorker(CollectorWorker):
 
 
     def shutdown(self):
+        self.cap.release()
         self.img_q.close()
         self.event_q.close()
 
@@ -155,16 +163,16 @@ class SimpleCollectorWorker(CollectorWorker):
     def init_args(self, args):
         if args:
             raise ValueError(f"Unexpected arguments to ProcWorker.init_args: {args}")
-        self.INTERVAL_SECS = self.defs.INTERVAL_SECS
-        self.RESOLUTION = (self.defs.H_RESOLUTION, self.defs.V_RESOLUTION)  # pi camera resolution
         self.FRAMERATE = self.defs.FRAMERATE  # pi camera framerate
-        self.MAX_VID_LEN = self.defs.MAX_VID_LEN
+        self.RESOLUTION = (int(self.cap.get(3)), int(self.cap.get(4)))
+        self.MAX_VID_LEN = self.defs.MAX_VID_LEN  # max length of an individual video (in hours)
+        self.INTERVAL_SECS = self.defs.INTERVAL_SECS
 
     def main_func(self):
-        time.sleep(5)
+        ret, img = self.cap.read()
+        self.writer.write(img)
         if self.MAX_VID_LEN and (dt.datetime.now().hour - self.last_split >= self.MAX_VID_LEN):
             self.split_recording()
-            self.last_split = dt.datetime.now().hour
 
     def shutdown(self):
         self.cam.stop_recording()
