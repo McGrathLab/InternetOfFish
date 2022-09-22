@@ -91,7 +91,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             self.mock_hit_flag = True
             return
         orig_img = cv2.resize(img, self.inference_size)
-        inf_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        inf_img = cv2.cvtColor(orig_img, cv2.COLOR_BGR2RGB)
         if self.multinet_mode and not self.loop_counter % 100:
             self.update_pipe_location(inf_img)
         dets = self.detect(inf_img)
