@@ -97,8 +97,6 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         dets = self.detect(img)
         fish_dets, pipe_det = self.filter_dets(dets)
         self.buffer.append(BufferEntry(cap_time, img, fish_dets, pipe_det))
-        # if self.metadata['source']:
-        #     self.overlay_boxes(self.buffer[-1])
         hit_flag = self.check_for_hit(fish_dets, pipe_det)
         self.hit_counter.increment() if hit_flag else self.hit_counter.decrement()
         if self.mock_hit_flag or (self.hit_counter.hits >= self.HIT_THRESH):
@@ -222,8 +220,9 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
     def shutdown(self):
         if self.avg_timer.avg:
             self.logger.log(logging.INFO, f'average time for detection loop: {self.avg_timer.avg * 1000}ms')
-        if self.metadata['source']:
-            self.jpgs_to_mp4(glob(os.path.join(self.img_dir, '*.jpg')))
+        if self.metadata['source'] and self.buffer:
+            img_paths = [self.overlay_boxes(be) for be in self.buffer]
+            self.jpgs_to_mp4(img_paths)
         if self.metadata['demo'] or self.metadata['source']:
             self.event_q.safe_put(
                 mptools.EventMessage(self.name, 'ENTER_PASSIVE_MODE', f'detection complete, entering passive mode'))
