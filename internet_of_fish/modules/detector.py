@@ -87,14 +87,16 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
 
     def main_func(self, q_item):
         cap_time, img = q_item
-        if self.multinet_mode and not self.loop_counter % 100:
-            self.update_pipe_location(img)
         if isinstance(img, str) and (img == 'MOCK_HIT'):
             self.mock_hit_flag = True
             return
-        dets = self.detect(img)
+        orig_img = cv2.resize(img, self.inference_size)
+        inf_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        if self.multinet_mode and not self.loop_counter % 100:
+            self.update_pipe_location(inf_img)
+        dets = self.detect(inf_img)
         fish_dets, pipe_det = self.filter_dets(dets)
-        self.buffer.append(BufferEntry(cap_time, img, fish_dets, pipe_det))
+        self.buffer.append(BufferEntry(cap_time, orig_img, fish_dets, pipe_det))
         if self.metadata['source']:
             self.overlay_boxes(self.buffer[-1])
         hit_flag = self.check_for_hit(fish_dets, pipe_det)
@@ -140,10 +142,9 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         if not interp:
             interp = self.interpreter
         start = time.time()
-        inf_img = cv2.resize(cv2.cvtColor(img, cv2.COLOR_BGR2RGB), self.inference_size)
         # _, scale = common.set_resized_input(interp, img.size, lambda size: img.resize(size, Image.ANTIALIAS))
         # interp.invoke()
-        run_inference(interp, inf_img.tobytes())
+        run_inference(interp, img.tobytes())
         dets = detect.get_objects(interp, self.defs.CONF_THRESH)
         if update_timer:
             self.avg_timer.update(time.time() - start)

@@ -35,10 +35,9 @@ class CollectorWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
     def main_func(self):
         cap_time = gen_utils.current_time_ms()
         ret, img = self.cap.read()
+        self.writer.write(img)
         if cap_time - self.last_det >= self.INTERVAL_MSECS:
             self.img_q.safe_put((cap_time, img))
-
-        self.writer.write(img)
         if self.MAX_VID_LEN and (dt.datetime.now().hour - self.last_split >= self.MAX_VID_LEN):
             self.split_recording()
         # tries_left = 3
@@ -107,7 +106,7 @@ class SourceCollectorWorker(CollectorWorker):
         self.cap = cv2.VideoCapture(self.video_file)
         self.RESOLUTION = (int(self.cap.get(3)), int(self.cap.get(4)))
         self.FRAMERATE = int(self.cap.get(cv2.CAP_PROP_FPS))
-        self.cap_rate = max(1, self.FRAMERATE * self.INTERVAL_SECS)
+        self.cap_rate = max(1, int(self.FRAMERATE * self.INTERVAL_SECS))
         self.logger.log(logging.INFO, f"Collector will add an image to the queue every {self.cap_rate} frame(s)")
         self.frame_count = 0
         self.active = True
