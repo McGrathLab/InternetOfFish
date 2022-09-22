@@ -8,7 +8,7 @@ import cv2
 from pycoral.adapters import common
 from pycoral.adapters import detect
 from pycoral.utils.dataset import read_label_file
-from pycoral.utils.edgetpu import make_interpreter
+from pycoral.utils.edgetpu import make_interpreter, run_inference
 
 import internet_of_fish.modules.utils.advanced_utils
 from internet_of_fish.modules import mptools
@@ -142,11 +142,12 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         if not interp:
             interp = self.interpreter
         start = time.time()
+        inf_size = common.input_size(interp)
         print(img.shape)
-        _, scale = common.set_resized_input(
-            interp, img.shape[:2], lambda size: cv2.cvtColor(cv2.resize(img, size), cv2.COLOR_BGR2RGB).tobytes())
-        interp.invoke()
-        dets = detect.get_objects(interp, self.defs.CONF_THRESH, scale)
+        print(inf_size)
+        img = cv2.cvtColor(cv2.resize(img, inf_size), cv2.COLOR_BGR2RGB)
+        run_inference(interp, img.tobytes())
+        dets = detect.get_objects(interp, self.defs.CONF_THRESH)
         if update_timer:
             self.avg_timer.update(time.time() - start)
         return dets
