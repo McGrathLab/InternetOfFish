@@ -143,7 +143,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             interp = self.interpreter
         start = time.time()
         _, scale = common.set_resized_input(
-            interp, img.shape[:2], lambda size: cv2.cvtColor(cv2.resize(img, size), cv2.COLOR_BGR2RGB).to_bytes())
+            interp, img.shape[:2], lambda size: cv2.cvtColor(cv2.resize(img, size), cv2.COLOR_BGR2RGB).tobytes())
         interp.invoke()
         dets = detect.get_objects(interp, self.defs.CONF_THRESH, scale)
         if update_timer:
