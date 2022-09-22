@@ -89,7 +89,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         cap_time, img = q_item
         if self.multinet_mode and not self.loop_counter % 100:
             self.update_pipe_location(img)
-        if img == 'MOCK_HIT':
+        if isinstance(img, str) and (img == 'MOCK_HIT'):
             self.mock_hit_flag = True
             return
         dets = self.detect(img)
