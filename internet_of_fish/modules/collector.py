@@ -1,72 +1,91 @@
 import logging, os, io, time
-from PIL import Image
+# from PIL import Image
 from internet_of_fish.modules import mptools
 from internet_of_fish.modules.utils import gen_utils
-import picamera
 import cv2
 import datetime as dt
 
 
-class CollectorWorker(mptools.TimerProcWorker, metaclass=gen_utils.AutologMetaclass):
+class CollectorWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
 
 
     def init_args(self, args):
         self.img_q, = args
-        self.INTERVAL_SECS = self.defs.INTERVAL_SECS
-        self.RESOLUTION = (self.defs.H_RESOLUTION, self.defs.V_RESOLUTION)  # pi camera resolution
+        self.INTERVAL_MSECS = self.defs.INTERVAL_SECS * 1000
+        # self.RESOLUTION = (self.defs.H_RESOLUTION, self.defs.V_RESOLUTION)  # pi camera resolution
         self.FRAMERATE = self.defs.FRAMERATE  # pi camera framerate
+        self.RESOLUTION = (int(self.cap.get(3)), int(self.cap.get(4)))
         self.MAX_VID_LEN = self.defs.MAX_VID_LEN  # max length of an individual video (in hours)
 
     def startup(self):
-        self.cam = self.init_camera()
+        # self.cam = self.init_camera()
+        self.cap = cv2.VideoCapture(0)
         self.vid_dir = self.defs.PROJ_VID_DIR
-        self.cam.start_recording(self.generate_vid_path())
+        self.writer = cv2.VideoWriter(self.generate_vid_path(),
+                                      cv2.VideoWriter_fourcc(*'XVID'),
+                                      self.FRAMERATE,
+                                      self.RESOLUTION)
+        # self.cam.start_recording(self.generate_vid_path())
         self.last_split = dt.datetime.now().hour
+        self.last_det = gen_utils.current_time_ms()
 
     def main_func(self):
-        tries_left = 3
-        while tries_left:
-            cap_time = gen_utils.current_time_ms()
-            stream = io.BytesIO()
-            self.cam.capture(stream, format='jpeg', use_video_port=True)
-            stream.seek(0)
-            img = Image.open(stream)
-            try:
-                img.load()
-                break
-            except IOError as e:
-                self.logger.warning(f'unable to read image stream, {tries_left} attempts remaining')
-                tries_left -= 1
-        if not tries_left:
-            self.logger.error(f'failed to read image stream 3 consecutive times. Shutting down')
-            raise e
-        put_result = self.img_q.safe_put((cap_time, img))
-        stream.close()
-        if not put_result:
-            self.INTERVAL_SECS += 0.1
-            self.logger.info(f'img_q full, slowing collection interval to {self.INTERVAL_SECS}')
+        cap_time = gen_utils.current_time_ms()
+        ret, img = self.cap.read()
+        if cap_time - self.last_det >= self.INTERVAL_MSECS:
+            self.img_q.safe_put((cap_time, img))
+
+        self.writer.write(img)
         if self.MAX_VID_LEN and (dt.datetime.now().hour - self.last_split >= self.MAX_VID_LEN):
             self.split_recording()
-            self.last_split = dt.datetime.now().hour
+        # tries_left = 3
+        # while tries_left:
+            # stream = io.BytesIO()
+            # self.cam.capture(stream, format='jpeg', use_video_port=True)
+            # stream.seek(0)
+            # img = Image.open(stream)
+
+            # try:
+            #     img.load()
+            #     break
+            # except IOError as e:
+            #     self.logger.warning(f'unable to read image stream, {tries_left} attempts remaining')
+            #     tries_left -= 1
+        # if not tries_left:
+        #     self.logger.error(f'failed to read image stream 3 consecutive times. Shutting down')
+        #     raise e
+        # put_result = self.img_q.safe_put((cap_time, img))
+        # stream.close()
+        # if not put_result:
+        #     self.INTERVAL_SECS += 0.1
+        #     self.logger.info(f'img_q full, slowing collection interval to {self.INTERVAL_SECS}')
+        # if self.MAX_VID_LEN and (dt.datetime.now().hour - self.last_split >= self.MAX_VID_LEN):
+        #     self.split_recording()
 
     def shutdown(self):
-        self.cam.stop_recording()
-        self.cam.close()
+        # self.cam.stop_recording()
+        # self.cam.close()
+        self.cap.release()
+        self.writer.release()
         self.img_q.safe_put('END')
         self.img_q.close()
         self.event_q.close()
 
-    def init_camera(self):
-        cam = picamera.PiCamera()
-        cam.resolution = self.RESOLUTION
-        cam.framerate = self.FRAMERATE
-        return cam
+    # def init_camera(self):
+    #     cam = picamera.PiCamera()
+    #     cam.resolution = self.RESOLUTION
+    #     cam.framerate = self.FRAMERATE
+    #     return cam
 
     def generate_vid_path(self):
-        return os.path.join(self.vid_dir, f'{gen_utils.current_time_iso()}.h264')
+        return os.path.join(self.vid_dir, f'{gen_utils.current_time_iso()}.avi')
 
     def split_recording(self):
-        self.cam.split_recording(self.generate_vid_path())
+        # self.cam.split_recording(self.generate_vid_path())
+        self.writer.release()
+        self.writer = cv2.VideoWriter(self.generate_vid_path())
+        self.last_split = dt.datetime.now().hour
+
 
 
 class SourceCollectorWorker(CollectorWorker):
@@ -94,13 +113,13 @@ class SourceCollectorWorker(CollectorWorker):
         cap_time = gen_utils.current_time_ms()
         ret, frame = self.cam.read()
         if ret:
-            img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-            put_result = self.img_q.safe_put((cap_time, img))
+            # img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+            put_result = self.img_q.safe_put((cap_time, frame))
             while not put_result:
                 self.INTERVAL_SECS += 0.1
                 self.logger.debug(f'img_q full, increasing loop interval to {self.INTERVAL_SECS}')
                 time.sleep(self.INTERVAL_SECS)
-                put_result = self.img_q.safe_put((cap_time, img))
+                put_result = self.img_q.safe_put((cap_time, frame))
             self.frame_count += self.cap_rate
             self.cam.set(cv2.CAP_PROP_POS_FRAMES, self.frame_count)
         else:

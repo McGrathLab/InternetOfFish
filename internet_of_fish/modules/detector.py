@@ -1,14 +1,14 @@
 import os, logging, time
 from collections import namedtuple
 
-from PIL import Image, ImageDraw
 from glob import glob
 import numpy as np
+import cv2
 
 from pycoral.adapters import common
 from pycoral.adapters import detect
 from pycoral.utils.dataset import read_label_file
-from pycoral.utils.edgetpu import make_interpreter
+from pycoral.utils.edgetpu import make_interpreter, run_inference
 
 import internet_of_fish.modules.utils.advanced_utils
 from internet_of_fish.modules import mptools
@@ -78,6 +78,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             self.labels = read_label_file(label_paths[0])
             self.ids = {val: key for key, val in self.labels.items()}
 
+        self.inference_size = common.input_size(self.interpreter)
         self.hit_counter = HitCounter()
         self.avg_timer = gen_utils.Averager()
         self.buffer = []
@@ -139,24 +140,25 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         if not interp:
             interp = self.interpreter
         start = time.time()
-        _, scale = common.set_resized_input(interp, img.size, lambda size: img.resize(size, Image.ANTIALIAS))
-        interp.invoke()
-        dets = detect.get_objects(interp, self.defs.CONF_THRESH, scale)
+        inf_img = cv2.resize(cv2.cvtColor(img, cv2.COLOR_BGR2RGB), self.inference_size)
+        # _, scale = common.set_resized_input(interp, img.size, lambda size: img.resize(size, Image.ANTIALIAS))
+        # interp.invoke()
+        run_inference(interp, inf_img.tobytes())
+        dets = detect.get_objects(interp, self.defs.CONF_THRESH)
         if update_timer:
             self.avg_timer.update(time.time() - start)
         return dets
 
+
     def overlay_boxes(self, buffer_entry: BufferEntry):
-        """open an image, draw detection boxes, and replace the original image"""     
-        draw = ImageDraw.Draw(buffer_entry.img)
+        """open an image, draw detection boxes, and replace the original image"""
+        # draw = ImageDraw.Draw(buffer_entry.img)
         
-        def overlay_box(det_, color_):
+        def overlay_box(img_, det_, color_):
             bbox = det_.bbox
-            draw.rectangle([(bbox.xmin, bbox.ymin), (bbox.xmax, bbox.ymax)],
-                           outline=color_)
-            draw.text((bbox.xmin + 10, bbox.ymin + 10),
-                      '%s\n%.2f' % (self.labels.get(det_.id, det_.id), det_.score),
-                      fill=color_)
+            cv2.rectangle(img_, (bbox.xmin, bbox.ymin), (bbox.xmax, bbox.ymax), color_, 2)
+            label = '%s\n%.2f' % (self.labels.get(det_.id, det_.id), det_.score)
+            cv2.putText(img_, label,(bbox.xmin + 10, bbox.ymin + 10), cv2.FONT_HERSHEY_SIMPLEX, 1.0, color, 2)
             
         fish_dets, pipe_det =(buffer_entry.fish_dets, buffer_entry.pipe_det)
         intersect_count = 0
@@ -167,11 +169,11 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
                 intersect = detect.BBox.intersect(det.bbox, pipe_det[0].bbox)
                 intersect_flag = (intersect.valid and np.isclose(intersect.area, det.bbox.area))
                 intersect_count += intersect_flag
-                color = 'green' if intersect_flag else 'red'
-            overlay_box(det, color)
+                color = (0, 255, 0) if intersect_flag else (0, 0, 255)
+            overlay_box(buffer_entry.img, det, color)
         if pipe_det:
-            color = 'red' if not intersect_count else 'yellow' if intersect_count == 1 else 'green'
-            overlay_box(pipe_det[0], color)
+            color = (0, 0, 255) if not intersect_count else (0, 255, 255) if intersect_count == 1 else (0, 255, 0)
+            overlay_box(buffer_entry.img, pipe_det[0], color)
         
         img_path = os.path.join(self.img_dir, f'{buffer_entry.cap_time}.jpg')
         buffer_entry.img.save(img_path)

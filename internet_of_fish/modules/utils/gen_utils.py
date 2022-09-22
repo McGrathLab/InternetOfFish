@@ -10,7 +10,7 @@ from types import FunctionType, SimpleNamespace
 import colorama
 
 LOG_DIR = definitions.LOG_DIR
-logging.getLogger('PIL').setLevel(logging.WARNING)
+# logging.getLogger('PIL').setLevel(logging.WARNING)
 
 default_color = 'BLUE'
 default_style = 'BRIGHT'
