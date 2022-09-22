@@ -164,7 +164,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         intersect_count = 0
         for det in fish_dets:
             if not pipe_det:
-                color = 'red'
+                color = (0, 0, 255)
             else:
                 intersect = detect.BBox.intersect(det.bbox, pipe_det[0].bbox)
                 intersect_flag = (intersect.valid and np.isclose(intersect.area, det.bbox.area))
