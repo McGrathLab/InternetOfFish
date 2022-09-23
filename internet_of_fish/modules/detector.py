@@ -89,12 +89,16 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.buffer.append(BufferEntry(cap_time, img, fish_dets))
         hit_flag = len(fish_dets) >= 2
         if (len(fish_dets) >= 1) and (time.time() - self.last_save >= self.SAVE_INTERVAL):
+            self.logger.debug('saving an image for annotation')
             self.save_for_anno(img, cap_time)
         self.hit_counter.increment() if hit_flag else self.hit_counter.decrement()
         if self.hit_counter.hits >= self.HIT_THRESH:
             self.logger.info(f"Hit counter reached {self.hit_counter.hits}, possible spawning event")
+            cap_times = np.array([be.cap_time for be in self.buffer]) / 1000
+            fps = int(np.round(1/np.mean(cap_times[1:] - cap_times[:-1])))
             img_paths = [self.overlay_boxes(be) for be in self.buffer]
-            vid_path = self.jpgs_to_mp4(img_paths)
+            self.logger.debug(f'composing video from {len(img_paths)} images')
+            vid_path = self.jpgs_to_mp4(img_paths, fps)
 
             # comment the next two lines to disable spawning notifications
             msg = f'possible spawning event in {self.metadata["tank_id"]} at {gen_utils.current_time_iso()}'
@@ -164,12 +168,12 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         cv2.imwrite(img_path, buffer_entry.img)
         return img_path
 
-    def jpgs_to_mp4(self, img_paths, delete_jpgs=True):
+    def jpgs_to_mp4(self, img_paths, fps=30, delete_jpgs=True):
         """convert a series of jpgs to a single mp4, and (if delete_jpgs) delete the original images"""
         if not img_paths:
             return
         dest_dir = self.defs.PROJ_VID_DIR
-        vid_path = internet_of_fish.modules.utils.advanced_utils.jpgs_to_mp4(img_paths, dest_dir, 1 / self.defs.INTERVAL_SECS)
+        vid_path = internet_of_fish.modules.utils.advanced_utils.jpgs_to_mp4(img_paths, dest_dir, fps)
         if delete_jpgs:
             [os.remove(x) for x in img_paths]
         return vid_path
