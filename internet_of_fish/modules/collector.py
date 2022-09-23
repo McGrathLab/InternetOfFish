@@ -90,7 +90,7 @@ class SourceCollectorWorker(CollectorWorker):
             put_result = self.img_q.safe_put((cap_time, img))
             while not put_result:
                 self.INTERVAL_SECS += 0.1
-                self.logger.debug(f'img_q full, increasing loop interval to {self.INTERVAL_SECS}')
+                self.logger.warning(f'img_q full, increasing loop interval to {self.INTERVAL_SECS}')
                 time.sleep(self.INTERVAL_SECS)
                 put_result = self.img_q.safe_put((cap_time, img))
             self.frame_count += self.cap_rate
