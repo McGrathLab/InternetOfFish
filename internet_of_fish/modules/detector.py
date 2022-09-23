@@ -65,9 +65,6 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.logger.debug(f'using {pipe_model[0]} as pipe model')
         self.pipe_interpreter = make_interpreter(pipe_model[0])
         self.pipe_interpreter.allocate_tensors()
-        self.labels = read_label_file(fish_labels[0])
-        self.pipe_labels = read_label_file(pipe_labels[0])
-        self.ids = {val: key for key, val in self.labels.items()}
 
         self.hit_counter = HitCounter()
         self.avg_timer = gen_utils.Averager()
@@ -149,7 +146,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         def overlay_box(img_, det_, color_):
             bbox = det_.bbox
             cv2.rectangle(img_, (bbox.xmin, bbox.ymin), (bbox.xmax, bbox.ymax), color_, 2)
-            label = '%s\n%.2f' % (self.labels.get(det_.id, det_.id), det_.score)
+            label = '%s\n%.2f' % ('fish', det_.score)
             cv2.putText(img_, label,(bbox.xmin + 10, bbox.ymin + 10), cv2.FONT_HERSHEY_SIMPLEX, 1.0, color, 2)
         for det in buffer_entry.fish_dets:
             overlay_box(buffer_entry.img, det, (0, 255, 0))
