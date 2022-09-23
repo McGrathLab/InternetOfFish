@@ -94,10 +94,11 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.hit_counter.increment() if hit_flag else self.hit_counter.decrement()
         if self.hit_counter.hits >= self.HIT_THRESH:
             self.logger.info(f"Hit counter reached {self.hit_counter.hits}, possible spawning event")
-            cap_times = np.array([be.cap_time for be in self.buffer]) / 1000
+            cap_times = np.sort(np.array([be.cap_time for be in self.buffer]) / 1000)
             fps = int(np.round(1/np.mean(cap_times[1:] - cap_times[:-1])))
             img_paths = [self.overlay_boxes(be) for be in self.buffer]
-            self.logger.debug(f'composing video from {len(img_paths)} images')
+            self.logger.info(f'composing video from {len(img_paths)} images at {fps} fps. Projected length of '
+                              f'{len(img_paths) / fps} seconds')
             vid_path = self.jpgs_to_mp4(img_paths, fps)
 
             # comment the next two lines to disable spawning notifications
@@ -113,6 +114,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
 
     def save_for_anno(self, img, cap_time):
         img_path = os.path.join(self.anno_dir, f'{cap_time}.jpg')
+        self.last_save = time.time()
         cv2.imwrite(img_path, img)
 
     def print_info(self):
