@@ -33,7 +33,8 @@ def create_project_tree(proj_id, analysis_state):
     for dir_func in [definitions.PROJ_DIR,
                      definitions.PROJ_IMG_DIR,
                      definitions.PROJ_VID_DIR,
-                     definitions.PROJ_LOG_DIR]:
+                     definitions.PROJ_LOG_DIR,
+                     definitions.PROJ_ANNO_DIR]:
         path = dir_func(proj_id, analysis_state)
         if not os.path.exists(path):
             os.makedirs(path)
