@@ -76,7 +76,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
 
     def main_func(self, q_item):
 
-        if isinstance(q_item, str) and q_item == 'END_WARNING' and len(self.buffer) > 10:
+        if isinstance(q_item, str) and q_item == 'END_WARNING':
             img_paths = [self.overlay_boxes(be) for be in self.buffer]
             self.jpgs_to_mp4(img_paths)
             return
