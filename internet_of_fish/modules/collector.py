@@ -3,6 +3,7 @@ from internet_of_fish.modules import mptools
 from internet_of_fish.modules.utils import gen_utils
 import cv2
 import datetime as dt
+from math import ceil
 
 
 class CollectorWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
@@ -73,7 +74,7 @@ class SourceCollectorWorker(CollectorWorker):
         self.cap = cv2.VideoCapture(self.video_file)
         self.RESOLUTION = (int(self.cap.get(3)), int(self.cap.get(4)))
         self.FRAMERATE = int(self.cap.get(cv2.CAP_PROP_FPS))
-        self.cap_rate = max(1, int(self.FRAMERATE * self.INTERVAL_SECS))
+        self.cap_rate = max(1, int(ceil(self.FRAMERATE * self.INTERVAL_SECS)))
         self.logger.log(logging.INFO, f"Collector will add an image to the queue every {self.cap_rate} frame(s)")
         self.frame_count = 0
         self.active = True
