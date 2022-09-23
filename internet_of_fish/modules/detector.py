@@ -80,6 +80,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             self.jpgs_to_mp4(img_paths)
             return
         cap_time, img = q_item
+        print((cap_time/1000)-self.last_save)
         if not self.loop_counter % 100 or not self.pipe_det:
             self.update_pipe_location(img)
             if not self.pipe_det:
