@@ -35,7 +35,7 @@ class CollectorWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
         ret, img = self.cap.read()
         self.writer.write(img)
         if cap_time - self.last_det >= self.INTERVAL_MSECS:
-            img = cv2.resize(img, (img.shape[1]//2, img.shape[0]//2))
+            # img = cv2.resize(img, (img.shape[1]//2, img.shape[0]//2))
             self.img_q.safe_put((cap_time, img))
         if self.MAX_VID_LEN and (dt.datetime.now().hour - self.last_split >= self.MAX_VID_LEN):
             self.split_recording()
@@ -87,15 +87,10 @@ class SourceCollectorWorker(CollectorWorker):
         ret, img = self.cap.read()
         cap_time = gen_utils.current_time_ms()
         if ret:
-            put_result = self.img_q.safe_put((cap_time, img))
-            while not put_result:
-                self.INTERVAL_SECS += 0.1
-                self.logger.warning(f'img_q full, increasing loop interval to {self.INTERVAL_SECS}')
-                time.sleep(self.INTERVAL_SECS)
-                put_result = self.img_q.safe_put((cap_time, img))
+            self.img_q.safe_put((cap_time, img))
             self.frame_count += self.cap_rate
             self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.frame_count)
-            time.sleep(self.INTERVAL_SECS - (time.time() - start))
+            time.sleep(max(0, self.INTERVAL_SECS - (time.time() - start)))
         else:
             self.active = False
             self.logger.log(logging.INFO, "VideoCollector entering sleep mode (no more frames to process)")
