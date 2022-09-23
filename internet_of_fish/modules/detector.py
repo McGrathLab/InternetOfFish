@@ -95,6 +95,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         if self.hit_counter.hits >= self.HIT_THRESH:
             self.logger.info(f"Hit counter reached {self.hit_counter.hits}, possible spawning event")
             cap_times = np.sort(np.array([be.cap_time for be in self.buffer]) / 1000)
+            print(cap_times)
             fps = int(np.round(1/np.mean(cap_times[1:] - cap_times[:-1])))
             img_paths = [self.overlay_boxes(be) for be in self.buffer]
             self.logger.info(f'composing video from {len(img_paths)} images at {fps} fps. Projected length of '
