@@ -17,6 +17,7 @@ class CollectorWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
     def startup(self):
         self.cap = self.get_cap_obj()
         self.RESOLUTION = (int(self.cap.get(3)), int(self.cap.get(4)))
+        self.cap.set(cv2.CAP_PROP_FPS, self.FRAMERATE)
         self.vid_dir = self.defs.PROJ_VID_DIR
         self.writer = cv2.VideoWriter(self.generate_vid_path(),
                                       cv2.VideoWriter_fourcc(*'XVID'),
@@ -85,7 +86,6 @@ class SourceCollectorWorker(CollectorWorker):
         ret, img = self.cap.read()
         if ret:
             img = cv2.resize(img, (img.shape[1]//2, img.shape[0]//2))
-            # img = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
             put_result = self.img_q.safe_put((cap_time, img))
             while not put_result:
                 self.INTERVAL_SECS += 0.1

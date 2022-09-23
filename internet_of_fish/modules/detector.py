@@ -164,7 +164,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         if not img_paths:
             return
         dest_dir = self.defs.PROJ_VID_DIR
-        vid_path = internet_of_fish.modules.utils.advanced_utils.jpgs_to_mp4(img_paths, dest_dir, 1 // self.defs.INTERVAL_SECS)
+        vid_path = internet_of_fish.modules.utils.advanced_utils.jpgs_to_mp4(img_paths, dest_dir, 1 / self.defs.INTERVAL_SECS)
         if delete_jpgs:
             [os.remove(x) for x in img_paths]
         return vid_path
