@@ -79,7 +79,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             self.update_pipe_location(img)
             if not self.pipe_det:
                 return
-        img = img[self.pipe_det.bbox.xmin: self.pipe_det.bbox.xmax, self.pipe_det.bbox.ymin:self.pipe_det.bbox.ymax]
+        img = img[self.pipe_det.bbox.ymin:self.pipe_det.bbox.ymax, self.pipe_det.bbox.xmin: self.pipe_det.bbox.xmax]
         fish_dets = self.detect(img)
         self.buffer.append(BufferEntry(cap_time, img, fish_dets))
         hit_flag = len(fish_dets) >= 2
