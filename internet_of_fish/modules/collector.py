@@ -80,11 +80,12 @@ class SourceCollectorWorker(CollectorWorker):
         self.active = True
 
     def main_func(self):
+        start = time.time()
         if not self.active:
             time.sleep(1)
             return
-        cap_time = gen_utils.current_time_ms()
         ret, img = self.cap.read()
+        cap_time = gen_utils.current_time_ms()
         if ret:
             img = cv2.resize(img, (img.shape[1]//2, img.shape[0]//2))
             put_result = self.img_q.safe_put((cap_time, img))
@@ -95,7 +96,7 @@ class SourceCollectorWorker(CollectorWorker):
                 put_result = self.img_q.safe_put((cap_time, img))
             self.frame_count += self.cap_rate
             self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.frame_count)
-            time.sleep(self.INTERVAL_SECS)
+            time.sleep(self.INTERVAL_SECS - (time.time() - start))
         else:
             self.active = False
             self.logger.log(logging.INFO, "VideoCollector entering sleep mode (no more frames to process)")
