@@ -99,6 +99,7 @@ class SourceCollectorWorker(CollectorWorker):
         else:
             self.active = False
             self.logger.log(logging.INFO, "VideoCollector entering sleep mode (no more frames to process)")
+            self.img_q.safe_put('END_WARNING')
             self.img_q.safe_put('END')
 
     def locate_video(self):

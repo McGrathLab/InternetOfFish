@@ -27,7 +27,7 @@ class HitCounter:
         self.hits += (1.0 * self.growth_rate)
 
     def decrement(self):
-        self.hits = max(0.0, self.growth_rate - (1 * self.decay_rate))
+        self.hits = max(0.0, self.hits - (1 * self.decay_rate))
 
     def reset(self):
         self.hits = 0.0
@@ -75,6 +75,10 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
 
     def main_func(self, q_item):
         cap_time, img = q_item
+        if isinstance(img, str) and img == 'END_WARNING' and len(self.buffer) > 10:
+            img_paths = [self.overlay_boxes(be) for be in self.buffer]
+            self.jpgs_to_mp4(img_paths)
+            return
         if not self.loop_counter % 100 or not self.pipe_det:
             self.update_pipe_location(img)
             if not self.pipe_det:
@@ -172,9 +176,6 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
     def shutdown(self):
         if self.avg_timer.avg:
             self.logger.log(logging.INFO, f'average time for detection loop: {self.avg_timer.avg * 1000}ms')
-        if self.metadata['source'] and len(self.buffer) >= 10:
-            img_paths = [self.overlay_boxes(be) for be in self.buffer]
-            self.jpgs_to_mp4(img_paths)
         if self.metadata['demo'] or self.metadata['source']:
             self.event_q.safe_put(
                 mptools.EventMessage(self.name, 'ENTER_PASSIVE_MODE', f'detection complete, entering passive mode'))
