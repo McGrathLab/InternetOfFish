@@ -104,7 +104,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
 
     def save_for_anno(self, img, cap_time):
         img_path = os.path.join(self.anno_dir, f'{cap_time}.jpg')
-        img.save(img_path)
+        cv2.imwrite(img_path, img)
 
     def print_info(self):
         if self.loop_counter == 1 or self.loop_counter == 10 or not self.loop_counter % 100:
