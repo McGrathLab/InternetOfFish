@@ -143,7 +143,6 @@ class UI:
         demo_menu = OptDict()
         demo_menu.update(Opt('view the tail of the summary log', ui_utils.print_summary_log_tail))
         demo_menu.update(Opt('view the tail of a different log', ui_utils.print_selected_log_tail))
-        demo_menu.update(Opt('trigger the "hit" response', ui_utils.inject_override, 'MOCK_HIT'))
         demo_menu.update(Opt('put the runner into active mode', ui_utils.inject_override, 'ENTER_ACTIVE_MODE'))
         demo_menu.update(Opt('put the runner into passive mode', ui_utils.inject_override, 'ENTER_PASSIVE_MODE'))
         demo_menu.update(Opt('put the runner into end mode', ui_utils.inject_override, 'ENTER_END_MODE'))
@@ -200,6 +199,8 @@ class UI:
             print('cannot start a project that does not exist. Try selecting "create a new project" instead')
             return
         self.main_ctx = mptools.MainContext(metadata.MetaDataHandler(new_proj=False).simplify())
+        if self.main_ctx.metadata['source']:
+            file_utils.download_json(self.main_ctx.metadata['proj_id'], self.main_ctx.metadata['analysis_state'])
         mptools.init_signals(self.main_ctx.shutdown_event, mptools.default_signal_handler, mptools.default_signal_handler)
         self.main_ctx.Proc('RUN', runner.RunnerWorker, self.main_ctx)
         print(f'{self.main_ctx.metadata["proj_id"]} is now running in the background')
