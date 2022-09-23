@@ -87,7 +87,6 @@ class SourceCollectorWorker(CollectorWorker):
         ret, img = self.cap.read()
         cap_time = gen_utils.current_time_ms()
         if ret:
-            img = cv2.resize(img, (img.shape[1]//2, img.shape[0]//2))
             put_result = self.img_q.safe_put((cap_time, img))
             while not put_result:
                 self.INTERVAL_SECS += 0.1
