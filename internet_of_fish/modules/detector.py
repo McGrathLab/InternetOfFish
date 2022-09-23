@@ -79,7 +79,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             self.update_pipe_location(img)
             if not self.pipe_det:
                 return
-        img = img[self.pipe_det.bbox.ymin:self.pipe_det.bbox.ymax, self.pipe_det.bbox.xmin: self.pipe_det.bbox.xmax]
+        img = img[self.pipe_det.bbox.xmin: self.pipe_det.bbox.xmax, self.pipe_det.bbox.ymin:self.pipe_det.bbox.ymax]
         fish_dets = self.detect(img)
         self.buffer.append(BufferEntry(cap_time, img, fish_dets))
         hit_flag = len(fish_dets) >= 2
@@ -123,8 +123,11 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             if old_loc:
                 iou = detect.BBox.intersect(old_loc.bbox, self.pipe_det.bbox)
                 self.logger.debug(f'pipe location updated. IOU with previous location of {iou}')
+                if iou < 0.95:
+                    self.logger.info(f'low IOU score detected. Rerunning pipe locator until IOU is above 0.95')
+                    self.update_pipe_location(img)
             else:
-                self.logger.debug(f'pipe location initialized as {self.pipe_det.bbox}')
+                self.update_pipe_location(img)
 
     def detect(self, img, interp=None, update_timer=True):
         """run detection on a single image"""
