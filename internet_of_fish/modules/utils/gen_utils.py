@@ -15,7 +15,7 @@ LOG_DIR = definitions.LOG_DIR
 default_color = 'BLUE'
 default_style = 'BRIGHT'
 summary_logger_level = logging.INFO
-minimum_logger_level = logging.INFO
+minimum_logger_level = logging.DEBUG
 
 
 def finput(prompt, options=None, simplify=True, pattern=None, mapping=None, help_str=None, confirm=False,
