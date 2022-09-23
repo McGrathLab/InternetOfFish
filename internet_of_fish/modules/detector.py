@@ -103,7 +103,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             self.buffer = []
         if len(self.buffer) > self.IMG_BUFFER:
             self.buffer.pop(0)
-        if self.metadata['source']:
+        if self.metadata['source'] and self.buffer:
             self.overlay_boxes(self.buffer[-1])
         self.loop_counter += 1
         self.print_info()
