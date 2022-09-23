@@ -147,7 +147,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             bbox = det_.bbox
             cv2.rectangle(img_, (bbox.xmin, bbox.ymin), (bbox.xmax, bbox.ymax), color_, 2)
             label = '%s\n%.2f' % ('fish', det_.score)
-            cv2.putText(img_, label,(bbox.xmin + 10, bbox.ymin + 10), cv2.FONT_HERSHEY_SIMPLEX, 1.0, color, 2)
+            cv2.putText(img_, label,(bbox.xmin + 10, bbox.ymin + 10), cv2.FONT_HERSHEY_SIMPLEX, 1.0, color_, 2)
         for det in buffer_entry.fish_dets:
             overlay_box(buffer_entry.img, det, (0, 255, 0))
 
