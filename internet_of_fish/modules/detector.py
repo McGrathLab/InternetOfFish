@@ -40,8 +40,8 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.work_q, = args
         self.MODELS_DIR = self.defs.MODELS_DIR
         self.DATA_DIR = self.defs.DATA_DIR
-        self.HIT_THRESH = self.defs.HIT_THRESH_SECS / self.defs.INTERVAL_SECS
-        self.IMG_BUFFER = self.defs.IMG_BUFFER_SECS / self.defs.INTERVAL_SECS
+        self.HIT_THRESH = self.defs.HIT_THRESH_SECS // self.defs.INTERVAL_SECS
+        self.IMG_BUFFER = self.defs.IMG_BUFFER_SECS // self.defs.INTERVAL_SECS
         self.SAVE_INTERVAL = 60  # minimum interval between images saved for annotation
 
     def startup(self):
@@ -80,7 +80,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             if not self.pipe_det:
                 return
         img = img[self.pipe_det.bbox.ymin:self.pipe_det.bbox.ymax, self.pipe_det.bbox.xmin: self.pipe_det.bbox.xmax]
-        fish_dets = self.detect(img)
+        fish_dets = sorted(self.detect(img), reverse=True, key=lambda x: x.score)[:2]
         self.buffer.append(BufferEntry(cap_time, img, fish_dets))
         hit_flag = len(fish_dets) >= 2
         if (len(fish_dets) >= 1) and (time.time() - self.last_save >= self.SAVE_INTERVAL):
