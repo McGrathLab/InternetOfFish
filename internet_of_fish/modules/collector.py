@@ -35,7 +35,7 @@ class CollectorWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
         ret, img = self.cap.read()
         self.writer.write(img)
         if cap_time - self.last_det >= self.INTERVAL_MSECS:
-            # img = cv2.resize(img, (img.shape[1]//2, img.shape[0]//2))
+            img = cv2.resize(img, (img.shape[1]//2, img.shape[0]//2))
             self.img_q.safe_put((cap_time, img))
         if self.MAX_VID_LEN and (dt.datetime.now().hour - self.last_split >= self.MAX_VID_LEN):
             self.split_recording()
@@ -55,7 +55,6 @@ class CollectorWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
         self.writer.release()
         self.writer = cv2.VideoWriter(self.generate_vid_path())
         self.last_split = dt.datetime.now().hour
-
 
 
 class SourceCollectorWorker(CollectorWorker):
@@ -80,13 +79,13 @@ class SourceCollectorWorker(CollectorWorker):
         self.active = True
 
     def main_func(self):
-        start = time.time()
         if not self.active:
             time.sleep(1)
             return
         ret, img = self.cap.read()
         cap_time = gen_utils.current_time_ms()
         if ret:
+            img = cv2.resize(img, (img.shape[1] // 2, img.shape[0] // 2))
             self.img_q.safe_put((cap_time, img))
             self.frame_count += self.cap_rate
             self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.frame_count)
@@ -113,7 +112,6 @@ class SourceCollectorWorker(CollectorWorker):
             self.logger.log(logging.ERROR, f'failed to locate video file {self.video_file}. '
                                            f'Try placing it in {self.defs.HOME_DIR}')
             raise FileNotFoundError
-
 
     def shutdown(self):
         self.cap.release()

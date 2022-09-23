@@ -42,6 +42,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.DATA_DIR = self.defs.DATA_DIR
         self.HIT_THRESH = self.defs.HIT_THRESH_SECS // self.defs.INTERVAL_SECS
         self.IMG_BUFFER = self.defs.IMG_BUFFER_SECS // self.defs.INTERVAL_SECS
+        self.INTERVAL_SECS = self.defs.INTERVAL_SECS
         self.SAVE_INTERVAL = 60  # minimum interval between images saved for annotation
 
     def startup(self):
@@ -80,7 +81,6 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             self.jpgs_to_mp4(img_paths)
             return
         cap_time, img = q_item
-        print((cap_time/1000)-self.last_save)
         if not self.loop_counter % 100 or not self.pipe_det:
             self.update_pipe_location(img)
             if not self.pipe_det:
@@ -95,12 +95,8 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.hit_counter.increment() if hit_flag else self.hit_counter.decrement()
         if self.hit_counter.hits >= self.HIT_THRESH:
             self.logger.info(f"Hit counter reached {self.hit_counter.hits}, possible spawning event")
-            cap_times = np.sort(np.array([be.cap_time for be in self.buffer]) / 1000)
-            fps = int(np.round(1/np.mean(cap_times[1:] - cap_times[:-1])))
             img_paths = [self.overlay_boxes(be) for be in self.buffer]
-            self.logger.info(f'composing video from {len(img_paths)} images at {fps} fps. Projected length of '
-                              f'{len(img_paths) / fps} seconds')
-            vid_path = self.jpgs_to_mp4(img_paths, fps)
+            vid_path = self.jpgs_to_mp4(img_paths, 1//self.INTERVAL_SECS)
 
             # comment the next two lines to disable spawning notifications
             # msg = f'possible spawning event in {self.metadata["tank_id"]} at {gen_utils.current_time_iso()}'
