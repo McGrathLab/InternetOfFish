@@ -121,7 +121,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             old_loc = self.pipe_det
             self.pipe_det = sorted(new_loc, reverse=True, key=lambda x: x.score)[0]
             if old_loc:
-                iou = detect.BBox.intersect(old_loc.bbox, self.pipe_det.bbox)
+                iou = detect.BBox.iou(old_loc.bbox, self.pipe_det.bbox)
                 self.logger.debug(f'pipe location updated. IOU with previous location of {iou}')
                 if iou < 0.95:
                     self.logger.info(f'low IOU score detected. Rerunning pipe locator until IOU is above 0.95')
