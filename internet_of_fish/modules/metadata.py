@@ -206,7 +206,7 @@ class AdvancedConfigDict(MetaDataDictBase):
                           help_str='detector score threshold'),
             'INTERVAL_SECS':
                 MetaValue(key='INTERVAL_SECS',
-                          value='0.2',
+                          value='0.1',
                           pattern=my_regexes.any_float,
                           help_str='time between image captures in seconds'),
             'HIT_THRESH_SECS':
