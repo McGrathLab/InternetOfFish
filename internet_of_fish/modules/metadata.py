@@ -216,7 +216,7 @@ class AdvancedConfigDict(MetaDataDictBase):
                           help_str='approximate number of seconds of activity before an event should be registered'),
             'IMG_BUFFER_SECS':
                 MetaValue(key='IMG_BUFFER_SECS',
-                          value='30',
+                          value='10',
                           pattern=my_regexes.any_int,
                           help_str='length of video, in seconds, that will be saved when a hit occurs'),
             'START_HOUR':
