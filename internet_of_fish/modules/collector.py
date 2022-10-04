@@ -13,7 +13,7 @@ class CollectorWorker(mptools.TimerProcWorker, metaclass=gen_utils.AutologMetacl
         self.img_q, = args
         self.INTERVAL_SECS = self.defs.INTERVAL_SECS
         self.FRAMERATE = self.defs.FRAMERATE  # pi camera framerate
-        self.RESOLUTION = self.defs.RESOLUTION  # pi camera resolution
+        self.RESOLUTION = (self.defs.H_RESOLUTION, self.defs.V_RESOLUTION) # pi camera resolution
         self.MAX_VID_LEN = self.defs.MAX_VID_LEN  # max length of an individual video (in hours)
 
     def startup(self):
