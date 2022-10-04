@@ -73,13 +73,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.loop_counter = 0
         self.last_save = time.time()
 
-
     def main_func(self, q_item):
-
-        if isinstance(q_item, str) and q_item == 'END_WARNING':
-            img_paths = [self.overlay_boxes(be) for be in self.buffer]
-            self.jpgs_to_mp4(img_paths)
-            return
         cap_time, img = q_item
         if not self.loop_counter % 100 or not self.pipe_det:
             self.update_pipe_location(img)
