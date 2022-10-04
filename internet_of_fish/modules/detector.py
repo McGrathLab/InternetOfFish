@@ -91,7 +91,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         hit_flag = len(fish_dets) >= 2
         if (len(fish_dets) >= 1) and (time.time() - self.last_save >= self.SAVE_INTERVAL):
             self.logger.debug('saving an image for annotation')
-            self.save_for_anno(img, cap_time)
+            self.save_for_anno(img, cap_time, fish_dets)
         self.hit_counter.increment() if hit_flag else self.hit_counter.decrement()
         if self.hit_counter.hits >= self.HIT_THRESH:
             self.logger.info(f"Hit counter reached {self.hit_counter.hits}, possible spawning event")
@@ -109,10 +109,14 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.loop_counter += 1
         self.print_info()
 
-    def save_for_anno(self, img, cap_time):
+    def save_for_anno(self, img, cap_time, fish_dets):
         img_path = os.path.join(self.anno_dir, f'{cap_time}.jpg')
+        dets_path = os.path.join(self.anno_dir, f'{cap_time}.txt')
         self.last_save = time.time()
         cv2.imwrite(img_path, img)
+        with open(dets_path, 'w') as f:
+            for bbox in [d.bbox for d in fish_dets]:
+                f.write(f'0 {(bbox.xmax + bbox.xmin)/2} {(bbox.ymax - bbox.ymin)/2} {bbox.xmax-bbox.xmin} {bbox.ymax - bbox.ymin}\n')
 
     def print_info(self):
         if self.loop_counter == 1 or self.loop_counter == 10 or not self.loop_counter % 100:
