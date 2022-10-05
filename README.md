@@ -17,7 +17,7 @@ the BioSci-McGrath folder.
 Use the following command to clone the repository into a directory of your choosing, or use an IDE with github
 integration (such as PyCharm) to do the same.
 
-        git clone https://github.com/tlancaster6/InternetOfFish
+        git clone https://github.com/McGrathLab/InternetOfFish
 
 Move into the newly-created InternetOfFish directory and run the following command to install the controller
 dependencies.
