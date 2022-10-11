@@ -94,7 +94,7 @@ def clone(c):
         with c.cd('/home/pi/'):
             if c.run('test -d {}'.format('InternetOfFish'), warn=True).failed:
                 print('cloning repo')
-                c.run('git clone https://github.com/tlancaster6/InternetOfFish')
+                c.run('git clone https://github.com/McGrathLab/InternetOfFish')
     except Exception as e:
         print(f'clone failed with error: {e}')
 
