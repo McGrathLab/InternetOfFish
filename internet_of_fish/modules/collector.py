@@ -4,7 +4,7 @@ from internet_of_fish.modules.utils import gen_utils
 import cv2
 import datetime as dt
 from math import ceil
-import picamera2
+import picamera
 import numpy as np
 
 class CollectorWorker(mptools.TimerProcWorker, metaclass=gen_utils.AutologMetaclass):
@@ -26,7 +26,7 @@ class CollectorWorker(mptools.TimerProcWorker, metaclass=gen_utils.AutologMetacl
         self.resize_resolution_flat = self.resize_resolution[0] * self.resize_resolution[1] * 3
 
     def init_camera(self):
-        cam = picamera2.PiCamera2()
+        cam = picamera.PiCamera()
         cam.resolution = self.RESOLUTION
         cam.framerate = self.FRAMERATE
         return cam
