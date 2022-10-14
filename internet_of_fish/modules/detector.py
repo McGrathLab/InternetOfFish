@@ -148,7 +148,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         start = time.time()
         inf_size = common.input_size(interp)
         scale = (inf_size[1]/img.shape[1], inf_size[0]/img.shape[0])
-        img = cv2.cvtColor(cv2.resize(img, inf_size), cv2.COLOR_BGR2RGB)
+        img = cv2.resize(img, inf_size)
         run_inference(interp, img.tobytes())
         dets = detect.get_objects(interp, self.defs.CONF_THRESH, scale)
         if update_timer:
@@ -183,7 +183,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
     def shutdown(self):
         if self.avg_timer.avg:
             self.logger.log(logging.INFO, f'average time for detection loop: {self.avg_timer.avg * 1000}ms')
-        if self.metadata['demo'] or self.metadata['source']:
+        if self.metadata['source']:
             self.event_q.safe_put(
                 mptools.EventMessage(self.name, 'ENTER_PASSIVE_MODE', f'detection complete, entering passive mode'))
         self.work_q.close()

@@ -22,9 +22,6 @@ class CollectorWorker(mptools.TimerProcWorker, metaclass=gen_utils.AutologMetacl
         self.cam.start_recording(self.generate_vid_path())
         self.last_split = dt.datetime.now().hour
         self.last_det = gen_utils.current_time_ms()
-        # self.resize_resolution = self.calc_resize_resolution()
-        self.resize_resolution = self.RESOLUTION
-        self.resize_resolution_flat = self.resize_resolution[0] * self.resize_resolution[1] * 3
 
     def init_camera(self):
         cam = picamera.PiCamera()
@@ -32,19 +29,10 @@ class CollectorWorker(mptools.TimerProcWorker, metaclass=gen_utils.AutologMetacl
         cam.framerate = self.FRAMERATE
         return cam
 
-    def calc_resize_resolution(self):
-        """Calculate the downsized resolution as 1/2 of the original resolution rounded up to the nearest multiple of
-        32 (horizontally) and 16 (vertically)"""
-        hres_old, vres_old = self.RESOLUTION
-        hres_new = gen_utils.mround_up(hres_old/2, 32)
-        vres_new = gen_utils.mround_up(vres_old/2, 16)
-        return hres_new, vres_new
-
     def main_func(self):
         cap_time = gen_utils.current_time_ms()
-        image = np.empty((self.resize_resolution_flat,), dtype=np.uint8)
-        self.cam.capture(image, format='bgr', use_video_port=True)
-        image = image.reshape((self.resize_resolution[0], self.resize_resolution[1], 3))
+        image = np.empty((self.RESOLUTION[1], self.RESOLUTION[0], 3), dtype=np.uint8)
+        self.cam.capture(image, format='rgb', use_video_port=True)
         self.img_q.safe_put((cap_time, image))
         if self.MAX_VID_LEN and (dt.datetime.now().hour - self.last_split >= self.MAX_VID_LEN):
             self.split_recording()
@@ -92,7 +80,7 @@ class SourceCollectorWorker(CollectorWorker):
         ret, img = self.cap.read()
         cap_time = gen_utils.current_time_ms()
         if ret:
-            img = cv2.resize(img, (img.shape[1] // 2, img.shape[0] // 2))
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             put_result = self.img_q.safe_put((cap_time, img))
             while not put_result:
                 time.sleep(1)
