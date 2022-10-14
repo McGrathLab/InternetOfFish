@@ -48,7 +48,6 @@ class CollectorWorker(mptools.TimerProcWorker, metaclass=gen_utils.AutologMetacl
         return os.path.join(self.vid_dir, f'{gen_utils.current_time_iso()}.h264')
 
     def split_recording(self):
-        # self.cam.split_recording(self.generate_vid_path())
         self.cam.split_recording(self.generate_vid_path())
         self.last_split = dt.datetime.now().hour
 

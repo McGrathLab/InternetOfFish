@@ -72,7 +72,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.avg_timer = gen_utils.Averager()
         self.buffer = []
         self.loop_counter = 0
-        self.last_save = time.time()
+        self.last_save = None
 
     def main_func(self, q_item):
         cap_time, img = q_item
@@ -87,7 +87,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         fish_dets = sorted(self.detect(img), reverse=True, key=lambda x: x.score)[:2]
         self.buffer.append(BufferEntry(cap_time, img, fish_dets))
         hit_flag = len(fish_dets) >= 2
-        if (len(fish_dets) >= 1) and (time.time() - self.last_save >= self.SAVE_INTERVAL):
+        if (len(fish_dets) >= 1) and (not self.last_save or (time.time() - self.last_save >= self.SAVE_INTERVAL)):
             self.logger.debug('saving an image for annotation')
             self.save_for_anno(img, cap_time, fish_dets)
         self.hit_counter.increment() if hit_flag else self.hit_counter.decrement()
@@ -98,8 +98,8 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             vid_path = self.jpgs_to_mp4(img_paths, 1//self.INTERVAL_SECS)
 
             # comment the next two lines to disable spawning notifications
-            # msg = f'possible spawning event in {self.metadata["tank_id"]} at {gen_utils.current_time_iso()}'
-            # self.event_q.safe_put(mptools.EventMessage(self.name, 'NOTIFY', ['SPAWNING_EVENT', msg, vid_path]))
+            msg = f'possible spawning event in {self.metadata["tank_id"]} at {gen_utils.current_time_iso()}'
+            self.event_q.safe_put(mptools.EventMessage(self.name, 'NOTIFY', ['SPAWNING_EVENT', msg, vid_path]))
 
             self.hit_counter.reset()
             self.buffer = []
