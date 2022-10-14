@@ -2,6 +2,7 @@ from internet_of_fish.modules.mptools import QueueProcWorker
 from internet_of_fish.modules.utils import file_utils
 import os
 import subprocess
+import shutil
 
 
 class UploaderWorker(QueueProcWorker):
@@ -23,6 +24,8 @@ class UploaderWorker(QueueProcWorker):
                     target = mp4_path
                 else:
                     continue
+            if target.endswith('.log'):
+                target = shutil.copy(target, self.defs.PROJ_LOG_DIR)
             try:
                 self.logger.debug(f'uploading {target} to {file_utils.local_to_cloud(target)}')
                 cmnd = ['rclone', 'copyto', target, file_utils.local_to_cloud(target)]

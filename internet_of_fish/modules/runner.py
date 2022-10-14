@@ -234,10 +234,8 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
 
         if os.path.exists(proj_log_dir):
             shutil.rmtree(proj_log_dir)
-        shutil.copytree(self.defs.LOG_DIR, proj_log_dir)
 
         upload_list = []
-        upload_list.extend(glob.glob(os.path.join(proj_log_dir, '*.log*')))
         upload_list.extend(glob.glob(os.path.join(proj_vid_dir, '*.h264')))
         upload_list.extend(glob.glob(os.path.join(proj_vid_dir, '*.mp4')))
         upload_list.extend(glob.glob(os.path.join(proj_vid_dir, '*.avi')))
@@ -245,6 +243,8 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
         upload_list.extend(glob.glob(os.path.join(proj_anno_dir, '*.jpg')))
         upload_list.extend(glob.glob(os.path.join(proj_anno_dir, '*.txt')))
         upload_list.extend(glob.glob(os.path.join(proj_dir, '*.json')))
+        upload_list.extend(glob.glob(os.path.join(self.defs.LOG_DIR, '*.log.*')))
+        upload_list.extend(glob.glob(os.path.join(self.defs.LOG_DIR, '*.log')))
         n_workers = min(self.MAX_UPLOAD_WORKERS, len(upload_list))
         if upload_list:
             [self.upload_q.safe_put(upload) for upload in upload_list]
