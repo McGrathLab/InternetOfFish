@@ -76,7 +76,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
 
     def main_func(self, q_item):
         cap_time, img = q_item
-        if img == 'MOCK_HIT':
+        if isinstance(img, str) and (img == 'MOCK_HIT'):
             self.mock_hit_flag = True
             return
         if not self.loop_counter % 100 or not self.pipe_det:

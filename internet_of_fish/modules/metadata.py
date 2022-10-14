@@ -514,6 +514,7 @@ class MetaDataHandler(MetaDataDict):
         self['email'] = 'themcgrathlab@gmail.com'
         self['species'] = 'na'
         self['fish_type'] = 'other'
+        self['analysis_state'] = 'testing'
         self.set_kill_condition()
         file_utils.create_project_tree(self['proj_id'], self['analysis_state'])
         with open(self['json_path'], 'w') as f:
