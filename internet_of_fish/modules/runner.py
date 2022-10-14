@@ -161,6 +161,7 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
         n_workers = self.queue_uploads()
         for i in range(n_workers):
             self.secondary_ctx.Proc(f'UPLOAD{i+1}', uploader.UploaderWorker, self.upload_q)
+            time.sleep(0.02)
         self.logger.info('successfully entered passive mode')
 
     def hard_shutdown(self):
@@ -247,6 +248,8 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
         n_workers = min(self.MAX_UPLOAD_WORKERS, len(upload_list))
         if upload_list:
             [self.upload_q.safe_put(upload) for upload in upload_list]
+            self.logger.debug('upload list contains:')
+            [self.logger.debug(f'{os.path.basename(f)}') for f in upload_list]
         if queue_end_signals:
             [self.upload_q.safe_put('END') for _ in range(n_workers)]
         return n_workers
