@@ -241,7 +241,7 @@ class AdvancedConfigDict(MetaDataDictBase):
                           help_str='cooldown time, in seconds, between notifications'),
             'H_RESOLUTION':
                 MetaValue(key='H_RESOLUTION',
-                          value='1296',
+                          value='1280',
                           pattern=my_regexes.any_int,
                           help_str='picamera horizontal resolution'),
             'V_RESOLUTION':
