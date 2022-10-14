@@ -43,7 +43,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.HIT_THRESH = self.defs.HIT_THRESH_SECS // self.defs.INTERVAL_SECS
         self.IMG_BUFFER = self.defs.IMG_BUFFER_SECS // self.defs.INTERVAL_SECS
         self.INTERVAL_SECS = self.defs.INTERVAL_SECS
-        self.SAVE_INTERVAL = 60  # minimum interval between images saved for annotation
+        self.SAVE_INTERVAL = 600  # minimum interval between images saved for annotation
 
     def startup(self):
         self.pipe_det = None
