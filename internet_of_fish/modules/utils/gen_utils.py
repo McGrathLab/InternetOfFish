@@ -8,6 +8,7 @@ import os, socket
 from functools import wraps
 from types import FunctionType, SimpleNamespace
 import colorama
+from math import ceil
 
 LOG_DIR = definitions.LOG_DIR
 
@@ -286,6 +287,10 @@ class Averager:
     def reset(self):
         self.avg = None
         self.count = 0
+
+
+def mround_up(number, base):
+    return int(base * (ceil(number/base)))
 
 
 

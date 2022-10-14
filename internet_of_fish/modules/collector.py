@@ -22,7 +22,7 @@ class CollectorWorker(mptools.TimerProcWorker, metaclass=gen_utils.AutologMetacl
         self.cam.start_recording(self.generate_vid_path())
         self.last_split = dt.datetime.now().hour
         self.last_det = gen_utils.current_time_ms()
-        self.resize_resolution = (self.RESOLUTION[0]//2, self.RESOLUTION[1]//2)
+        self.resize_resolution = self.calc_resize_resolution()
         self.resize_resolution_flat = self.resize_resolution[0] * self.resize_resolution[1] * 3
 
     def init_camera(self):
@@ -30,6 +30,14 @@ class CollectorWorker(mptools.TimerProcWorker, metaclass=gen_utils.AutologMetacl
         cam.resolution = self.RESOLUTION
         cam.framerate = self.FRAMERATE
         return cam
+
+    def calc_resize_resolution(self):
+        """Calculate the downsized resolution as 1/2 of the original resolution rounded up to the nearest multiple of
+        32 (horizontally) and 16 (vertically)"""
+        hres_old, vres_old = self.RESOLUTION
+        hres_new = gen_utils.mround_up(hres_old/2, 32)
+        vres_new = gen_utils.mround_up(vres_old/2, 16)
+        return hres_new, vres_new
 
     def main_func(self):
         cap_time = gen_utils.current_time_ms()
