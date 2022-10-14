@@ -18,7 +18,7 @@ import shutil
 import pathlib
 
 EVENT_TYPES = ['NOTIFY', 'FATAL', 'HARD_SHUTDOWN', 'SOFT_SHUTDOWN', 'ENTER_ACTIVE_MODE', 'ENTER_PASSIVE_MODE',
-               'ENTER_END_MODE']
+               'ENTER_END_MODE', 'MOCK_HIT']
 
 class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
 
@@ -92,6 +92,9 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
         elif event.msg_type == 'ENTER_END_MODE':
             self.logger.info(f'{event.msg_type} event received. Exiting collection and uploading all remaining data')
             self.end_mode()
+        elif event.msg_type == 'MOCK_HIT':
+            self.logger.info(f'{event.msg_type} event received. Forcing the hit response')
+            self.mock_hit()
         else:
             self.logger.error(f"Unknown Event: {event}")
         self.logger.debug(f"exiting RunnerWorker.main_func")
@@ -192,6 +195,13 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
         self.logger.debug('secondary context successfully shut down')
         self.secondary_ctx = None
         self.event_q.drain()
+
+    def mock_hit(self):
+        if self.curr_mode != 'active':
+            self.logger.warning('cannot inject a mock hit while in passive mode. '
+                                'Please switch to active mode and try again')
+        else:
+            self.img_q.safe_put((gen_utils.current_time_ms(), 'MOCK_HIT'))
 
     def sleep_until_morning(self):
         """returns a positive sleep time, not exceeding the time until lights on (as specified by START_HOUR in the

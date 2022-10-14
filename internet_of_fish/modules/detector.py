@@ -50,6 +50,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.max_fish = self.metadata['n_fish'] if self.metadata['n_fish'] else self.defs.MAX_DETS
         self.img_dir = self.defs.PROJ_IMG_DIR
         self.anno_dir = self.defs.PROJ_ANNO_DIR
+        self.mock_hit_flag = False
 
         model_paths = glob(os.path.join(self.MODELS_DIR, self.metadata['model_id'], '*.tflite'))
         fish_model = [m for m in model_paths if 'fish' in os.path.basename(m)]
@@ -75,6 +76,9 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
 
     def main_func(self, q_item):
         cap_time, img = q_item
+        if img == 'MOCK_HIT':
+            self.mock_hit_flag = True
+            return
         if not self.loop_counter % 100 or not self.pipe_det:
             self.update_pipe_location(img)
             if not self.pipe_det:
@@ -87,7 +91,8 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             self.logger.debug('saving an image for annotation')
             self.save_for_anno(img, cap_time, fish_dets)
         self.hit_counter.increment() if hit_flag else self.hit_counter.decrement()
-        if self.hit_counter.hits >= self.HIT_THRESH:
+        if self.mock_hit_flag or self.hit_counter.hits >= self.HIT_THRESH:
+            self.mock_hit_flag = False
             self.logger.info(f"Hit counter reached {self.hit_counter.hits}, possible spawning event")
             img_paths = [self.overlay_boxes(be) for be in self.buffer]
             vid_path = self.jpgs_to_mp4(img_paths, 1//self.INTERVAL_SECS)
