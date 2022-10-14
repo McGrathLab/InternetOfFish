@@ -246,7 +246,7 @@ class AdvancedConfigDict(MetaDataDictBase):
                           help_str='picamera horizontal resolution'),
             'V_RESOLUTION':
                 MetaValue(key='V_RESOLUTION',
-                          value='972',
+                          value='976',
                           pattern=my_regexes.any_int,
                           help_str='picamera vertical resolution'),
             'FRAMERATE':
