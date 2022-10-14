@@ -22,7 +22,8 @@ class CollectorWorker(mptools.TimerProcWorker, metaclass=gen_utils.AutologMetacl
         self.cam.start_recording(self.generate_vid_path())
         self.last_split = dt.datetime.now().hour
         self.last_det = gen_utils.current_time_ms()
-        self.resize_resolution = self.calc_resize_resolution()
+        # self.resize_resolution = self.calc_resize_resolution()
+        self.resize_resolution = self.RESOLUTION
         self.resize_resolution_flat = self.resize_resolution[0] * self.resize_resolution[1] * 3
 
     def init_camera(self):
@@ -42,7 +43,7 @@ class CollectorWorker(mptools.TimerProcWorker, metaclass=gen_utils.AutologMetacl
     def main_func(self):
         cap_time = gen_utils.current_time_ms()
         image = np.empty((self.resize_resolution_flat,), dtype=np.uint8)
-        self.cam.capture(image, format='bgr', use_video_port=True, resize=self.resize_resolution)
+        self.cam.capture(image, format='bgr', use_video_port=True)
         image = image.reshape((self.resize_resolution[0], self.resize_resolution[1], 3))
         self.img_q.safe_put((cap_time, image))
         if self.MAX_VID_LEN and (dt.datetime.now().hour - self.last_split >= self.MAX_VID_LEN):
