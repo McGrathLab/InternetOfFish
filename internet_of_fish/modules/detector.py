@@ -43,13 +43,14 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.HIT_THRESH = self.defs.HIT_THRESH_SECS // self.defs.INTERVAL_SECS
         self.IMG_BUFFER = self.defs.IMG_BUFFER_SECS // self.defs.INTERVAL_SECS
         self.INTERVAL_SECS = self.defs.INTERVAL_SECS
-        self.SAVE_INTERVAL = 60  # minimum interval between images saved for annotation
+        self.SAVE_INTERVAL = 600  # minimum interval between images saved for annotation
 
     def startup(self):
         self.pipe_det = None
         self.max_fish = self.metadata['n_fish'] if self.metadata['n_fish'] else self.defs.MAX_DETS
         self.img_dir = self.defs.PROJ_IMG_DIR
         self.anno_dir = self.defs.PROJ_ANNO_DIR
+        self.mock_hit_flag = False
 
         model_paths = glob(os.path.join(self.MODELS_DIR, self.metadata['model_id'], '*.tflite'))
         fish_model = [m for m in model_paths if 'fish' in os.path.basename(m)]
@@ -71,10 +72,13 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.avg_timer = gen_utils.Averager()
         self.buffer = []
         self.loop_counter = 0
-        self.last_save = time.time()
+        self.last_save = None
 
     def main_func(self, q_item):
         cap_time, img = q_item
+        if isinstance(img, str) and (img == 'MOCK_HIT'):
+            self.mock_hit_flag = True
+            return
         if not self.loop_counter % 100 or not self.pipe_det:
             self.update_pipe_location(img)
             if not self.pipe_det:
@@ -83,18 +87,19 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         fish_dets = sorted(self.detect(img), reverse=True, key=lambda x: x.score)[:2]
         self.buffer.append(BufferEntry(cap_time, img, fish_dets))
         hit_flag = len(fish_dets) >= 2
-        if (len(fish_dets) >= 1) and (time.time() - self.last_save >= self.SAVE_INTERVAL):
+        if (len(fish_dets) >= 1) and (not self.last_save or (time.time() - self.last_save >= self.SAVE_INTERVAL)):
             self.logger.debug('saving an image for annotation')
             self.save_for_anno(img, cap_time, fish_dets)
         self.hit_counter.increment() if hit_flag else self.hit_counter.decrement()
-        if self.hit_counter.hits >= self.HIT_THRESH:
+        if self.mock_hit_flag or self.hit_counter.hits >= self.HIT_THRESH:
+            self.mock_hit_flag = False
             self.logger.info(f"Hit counter reached {self.hit_counter.hits}, possible spawning event")
             img_paths = [self.overlay_boxes(be) for be in self.buffer]
             vid_path = self.jpgs_to_mp4(img_paths, 1//self.INTERVAL_SECS)
 
             # comment the next two lines to disable spawning notifications
-            # msg = f'possible spawning event in {self.metadata["tank_id"]} at {gen_utils.current_time_iso()}'
-            # self.event_q.safe_put(mptools.EventMessage(self.name, 'NOTIFY', ['SPAWNING_EVENT', msg, vid_path]))
+            msg = f'possible spawning event in {self.metadata["tank_id"]} at {gen_utils.current_time_iso()}'
+            self.event_q.safe_put(mptools.EventMessage(self.name, 'NOTIFY', ['SPAWNING_EVENT', msg, vid_path]))
 
             self.hit_counter.reset()
             self.buffer = []
@@ -143,7 +148,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         start = time.time()
         inf_size = common.input_size(interp)
         scale = (inf_size[1]/img.shape[1], inf_size[0]/img.shape[0])
-        img = cv2.cvtColor(cv2.resize(img, inf_size), cv2.COLOR_BGR2RGB)
+        img = cv2.resize(img, inf_size)
         run_inference(interp, img.tobytes())
         dets = detect.get_objects(interp, self.defs.CONF_THRESH, scale)
         if update_timer:
@@ -178,7 +183,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
     def shutdown(self):
         if self.avg_timer.avg:
             self.logger.log(logging.INFO, f'average time for detection loop: {self.avg_timer.avg * 1000}ms')
-        if self.metadata['demo'] or self.metadata['source']:
+        if self.metadata['source']:
             self.event_q.safe_put(
                 mptools.EventMessage(self.name, 'ENTER_PASSIVE_MODE', f'detection complete, entering passive mode'))
         self.work_q.close()

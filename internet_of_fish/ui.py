@@ -143,6 +143,7 @@ class UI:
         demo_menu = OptDict()
         demo_menu.update(Opt('view the tail of the summary log', ui_utils.print_summary_log_tail))
         demo_menu.update(Opt('view the tail of a different log', ui_utils.print_selected_log_tail))
+        demo_menu.update(Opt('trigger the "hit" response', ui_utils.inject_override, 'MOCK_HIT'))
         demo_menu.update(Opt('put the runner into active mode', ui_utils.inject_override, 'ENTER_ACTIVE_MODE'))
         demo_menu.update(Opt('put the runner into passive mode', ui_utils.inject_override, 'ENTER_PASSIVE_MODE'))
         demo_menu.update(Opt('put the runner into end mode', ui_utils.inject_override, 'ENTER_END_MODE'))

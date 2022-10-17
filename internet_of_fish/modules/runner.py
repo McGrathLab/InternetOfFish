@@ -18,7 +18,7 @@ import shutil
 import pathlib
 
 EVENT_TYPES = ['NOTIFY', 'FATAL', 'HARD_SHUTDOWN', 'SOFT_SHUTDOWN', 'ENTER_ACTIVE_MODE', 'ENTER_PASSIVE_MODE',
-               'ENTER_END_MODE']
+               'ENTER_END_MODE', 'MOCK_HIT']
 
 class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
 
@@ -92,6 +92,9 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
         elif event.msg_type == 'ENTER_END_MODE':
             self.logger.info(f'{event.msg_type} event received. Exiting collection and uploading all remaining data')
             self.end_mode()
+        elif event.msg_type == 'MOCK_HIT':
+            self.logger.info(f'{event.msg_type} event received. Forcing the hit response')
+            self.mock_hit()
         else:
             self.logger.error(f"Unknown Event: {event}")
         self.logger.debug(f"exiting RunnerWorker.main_func")
@@ -158,6 +161,7 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
         n_workers = self.queue_uploads()
         for i in range(n_workers):
             self.secondary_ctx.Proc(f'UPLOAD{i+1}', uploader.UploaderWorker, self.upload_q)
+            time.sleep(0.02)
         self.logger.info('successfully entered passive mode')
 
     def hard_shutdown(self):
@@ -193,6 +197,13 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
         self.secondary_ctx = None
         self.event_q.drain()
 
+    def mock_hit(self):
+        if self.curr_mode != 'active':
+            self.logger.warning('cannot inject a mock hit while in passive mode. '
+                                'Please switch to active mode and try again')
+        else:
+            self.img_q.safe_put((gen_utils.current_time_ms(), 'MOCK_HIT'))
+
     def sleep_until_morning(self):
         """returns a positive sleep time, not exceeding the time until lights on (as specified by START_HOUR in the
         advanced config), but also no longer than 600 seconds. This function can be used to sleep a process for ten
@@ -216,17 +227,11 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
         if not analysis_state:
             analysis_state = self.metadata['analysis_state']
         proj_dir = definitions.PROJ_DIR(proj_id, analysis_state)
-        proj_log_dir = definitions.PROJ_LOG_DIR(proj_id, analysis_state)
         proj_vid_dir = definitions.PROJ_VID_DIR(proj_id, analysis_state)
         proj_img_dir = definitions.PROJ_IMG_DIR(proj_id, analysis_state)
         proj_anno_dir = definitions.PROJ_ANNO_DIR(proj_id, analysis_state)
 
-        if os.path.exists(proj_log_dir):
-            shutil.rmtree(proj_log_dir)
-        shutil.copytree(self.defs.LOG_DIR, proj_log_dir)
-
         upload_list = []
-        upload_list.extend(glob.glob(os.path.join(proj_log_dir, '*.log*')))
         upload_list.extend(glob.glob(os.path.join(proj_vid_dir, '*.h264')))
         upload_list.extend(glob.glob(os.path.join(proj_vid_dir, '*.mp4')))
         upload_list.extend(glob.glob(os.path.join(proj_vid_dir, '*.avi')))
@@ -234,9 +239,13 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
         upload_list.extend(glob.glob(os.path.join(proj_anno_dir, '*.jpg')))
         upload_list.extend(glob.glob(os.path.join(proj_anno_dir, '*.txt')))
         upload_list.extend(glob.glob(os.path.join(proj_dir, '*.json')))
+        upload_list.extend(glob.glob(os.path.join(self.defs.LOG_DIR, '*.log.*')))
+        upload_list.extend(glob.glob(os.path.join(self.defs.LOG_DIR, '*.log')))
         n_workers = min(self.MAX_UPLOAD_WORKERS, len(upload_list))
         if upload_list:
             [self.upload_q.safe_put(upload) for upload in upload_list]
+            self.logger.debug('upload list contains:')
+            [self.logger.debug(f'{os.path.basename(f)}') for f in upload_list]
         if queue_end_signals:
             [self.upload_q.safe_put('END') for _ in range(n_workers)]
         return n_workers

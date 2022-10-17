@@ -22,8 +22,6 @@ class CollectorWorker(mptools.TimerProcWorker, metaclass=gen_utils.AutologMetacl
         self.cam.start_recording(self.generate_vid_path())
         self.last_split = dt.datetime.now().hour
         self.last_det = gen_utils.current_time_ms()
-        self.resize_resolution = (self.RESOLUTION[0]//2, self.RESOLUTION[1]//2)
-        self.resize_resolution_flat = self.resize_resolution[0] * self.resize_resolution[1] * 3
 
     def init_camera(self):
         cam = picamera.PiCamera()
@@ -33,9 +31,8 @@ class CollectorWorker(mptools.TimerProcWorker, metaclass=gen_utils.AutologMetacl
 
     def main_func(self):
         cap_time = gen_utils.current_time_ms()
-        image = np.empty((self.resize_resolution_flat,), dtype=np.uint8)
-        self.cam.capture(image, format='bgr', use_video_port=True, resize=self.resize_resolution)
-        image = image.reshape((240, 320, 3))
+        image = np.empty((self.RESOLUTION[1], self.RESOLUTION[0], 3), dtype=np.uint8)
+        self.cam.capture(image, format='rgb', use_video_port=True)
         self.img_q.safe_put((cap_time, image))
         if self.MAX_VID_LEN and (dt.datetime.now().hour - self.last_split >= self.MAX_VID_LEN):
             self.split_recording()
@@ -51,7 +48,6 @@ class CollectorWorker(mptools.TimerProcWorker, metaclass=gen_utils.AutologMetacl
         return os.path.join(self.vid_dir, f'{gen_utils.current_time_iso()}.h264')
 
     def split_recording(self):
-        # self.cam.split_recording(self.generate_vid_path())
         self.cam.split_recording(self.generate_vid_path())
         self.last_split = dt.datetime.now().hour
 
@@ -83,7 +79,7 @@ class SourceCollectorWorker(CollectorWorker):
         ret, img = self.cap.read()
         cap_time = gen_utils.current_time_ms()
         if ret:
-            img = cv2.resize(img, (img.shape[1] // 2, img.shape[0] // 2))
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             put_result = self.img_q.safe_put((cap_time, img))
             while not put_result:
                 time.sleep(1)
