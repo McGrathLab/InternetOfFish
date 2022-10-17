@@ -201,17 +201,17 @@ class AdvancedConfigDict(MetaDataDictBase):
                                    'specified during metadata creation'),
             'CONF_THRESH':
                 MetaValue(key='CONF_THRESH',
-                          value='0.4',
+                          value='0.5',
                           pattern=my_regexes.any_float_less_than_1,
                           help_str='detector score threshold'),
             'INTERVAL_SECS':
                 MetaValue(key='INTERVAL_SECS',
-                          value='0.2',
+                          value='0.25',
                           pattern=my_regexes.any_float,
                           help_str='time between image captures in seconds'),
             'HIT_THRESH_SECS':
                 MetaValue(key='HIT_THRESH_SECS',
-                          value='3',
+                          value='5',
                           pattern=my_regexes.any_int,
                           help_str='approximate number of seconds of activity before an event should be registered'),
             'IMG_BUFFER_SECS':
