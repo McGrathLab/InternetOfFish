@@ -163,11 +163,12 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             cv2.rectangle(img_, (bbox.xmin, bbox.ymin), (bbox.xmax, bbox.ymax), color_, 2)
             label = '%s\n%.2f' % ('fish', det_.score)
             cv2.putText(img_, label,(bbox.xmin + 10, bbox.ymin + 10), cv2.FONT_HERSHEY_SIMPLEX, 1.0, color_, 2)
+        img = cv2.cvtColor(buffer_entry.img, cv2.COLOR_RGB2BGR)
         for det in buffer_entry.fish_dets:
-            overlay_box(buffer_entry.img, det, (0, 255, 0))
+            overlay_box(img, det, (0, 255, 0))
 
         img_path = os.path.join(self.img_dir, f'{buffer_entry.cap_time}.jpg')
-        cv2.imwrite(img_path, buffer_entry.img)
+        cv2.imwrite(img_path, img)
         return img_path
 
     def jpgs_to_mp4(self, img_paths, fps=30, delete_jpgs=True):
