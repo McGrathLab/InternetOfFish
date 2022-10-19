@@ -112,6 +112,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         img_path = os.path.join(self.anno_dir, f'{cap_time}.jpg')
         dets_path = os.path.join(self.anno_dir, f'{cap_time}.txt')
         self.last_save = time.time()
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         cv2.imwrite(img_path, img)
         with open(dets_path, 'w') as f:
             for bbox in [d.bbox for d in fish_dets]:
