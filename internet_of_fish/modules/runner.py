@@ -232,13 +232,13 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
         proj_anno_dir = definitions.PROJ_ANNO_DIR(proj_id, analysis_state)
 
         upload_list = []
+        upload_list.extend(glob.glob(os.path.join(proj_anno_dir, '*.jpg')))
+        upload_list.extend(glob.glob(os.path.join(proj_anno_dir, '*.txt')))
+        upload_list.extend(glob.glob(os.path.join(proj_dir, '*.json')))
         upload_list.extend(glob.glob(os.path.join(proj_vid_dir, '*.h264')))
         upload_list.extend(glob.glob(os.path.join(proj_vid_dir, '*.mp4')))
         upload_list.extend(glob.glob(os.path.join(proj_vid_dir, '*.avi')))
         upload_list.extend(glob.glob(os.path.join(proj_img_dir, '*.mp4')))
-        upload_list.extend(glob.glob(os.path.join(proj_anno_dir, '*.jpg')))
-        upload_list.extend(glob.glob(os.path.join(proj_anno_dir, '*.txt')))
-        upload_list.extend(glob.glob(os.path.join(proj_dir, '*.json')))
         upload_list.extend(glob.glob(os.path.join(self.defs.LOG_DIR, '*.log.*')))
         upload_list.extend(glob.glob(os.path.join(self.defs.LOG_DIR, '*.log')))
         n_workers = min(self.MAX_UPLOAD_WORKERS, len(upload_list))

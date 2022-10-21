@@ -261,7 +261,7 @@ class AdvancedConfigDict(MetaDataDictBase):
                           help_str='email address that has been configured with sendgrid to serve notifications'),
             'MAX_UPLOAD_WORKERS':
                 MetaValue(key='MAX_UPLOAD_WORKERS',
-                          value='3',
+                          value='2',
                           pattern=my_regexes.any_int,
                           help_str='max number of simultaneous upload processes to spawn'),
             'MAX_TRIES':
