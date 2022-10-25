@@ -87,9 +87,14 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         fish_dets = sorted(self.detect(img), reverse=True, key=lambda x: x.score)[:2]
         self.buffer.append(BufferEntry(cap_time, img, fish_dets))
         hit_flag = len(fish_dets) >= 2
-        if (len(fish_dets) >= 1) and (not self.last_save or (time.time() - self.last_save >= self.SAVE_INTERVAL)):
-            self.logger.debug('saving an image for annotation')
-            self.save_for_anno(img, cap_time, fish_dets)
+        if len(fish_dets) >= 1:
+            if (
+                not self.last_save or
+                time.time() - self.last_save >= self.SAVE_INTERVAL or
+                (len(fish_dets) >= 2) and time.time() - self.last_save >= self.SAVE_INTERVAL/10
+            ):
+                self.logger.debug('saving an image for annotation')
+                self.save_for_anno(img, cap_time, fish_dets)
         self.hit_counter.increment() if hit_flag else self.hit_counter.decrement()
         if self.mock_hit_flag or self.hit_counter.hits >= self.HIT_THRESH:
             self.mock_hit_flag = False
