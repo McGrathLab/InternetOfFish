@@ -84,7 +84,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             if not self.pipe_det:
                 return
         img = img[self.pipe_det.bbox.ymin:self.pipe_det.bbox.ymax, self.pipe_det.bbox.xmin: self.pipe_det.bbox.xmax]
-        fish_dets = sorted(self.detect(img), reverse=True, key=lambda x: x.score)[:2]
+        fish_dets = sorted(self.detect(img), reverse=True, key=lambda x: x.score)
         self.buffer.append(BufferEntry(cap_time, img, fish_dets))
         hit_flag = len(fish_dets) >= 2
         if len(fish_dets) >= 1:
