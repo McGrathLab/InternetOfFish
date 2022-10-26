@@ -119,7 +119,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.last_save = time.time()
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
         cv2.imwrite(img_path, img)
-        h, w = img.shape
+        h, w, _ = img.shape
 
         with open(dets_path, 'w') as f:
             for bbox in [d.bbox for d in fish_dets]:
