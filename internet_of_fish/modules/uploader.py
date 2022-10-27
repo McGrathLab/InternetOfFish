@@ -22,8 +22,6 @@ class UploaderWorker(QueueProcWorker):
                 mp4_path = self.h264_to_mp4(target)
                 if mp4_path:
                     target = mp4_path
-                else:
-                    continue
             if target.endswith('.log'):
                 target = shutil.copy(target, self.defs.PROJ_LOG_DIR)
             try:
