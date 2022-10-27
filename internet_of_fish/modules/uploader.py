@@ -1,3 +1,5 @@
+import time
+
 from internet_of_fish.modules.mptools import QueueProcWorker
 from internet_of_fish.modules.utils import file_utils
 import os
@@ -39,6 +41,7 @@ class UploaderWorker(QueueProcWorker):
             except Exception as e:
                 self.logger.debug(f'unexpected exception {e}')
             tries_left -= 1
+            time.sleep(60)
 
         else:
             # this else clause should only executes if the while loop exited because it ran out of tries
