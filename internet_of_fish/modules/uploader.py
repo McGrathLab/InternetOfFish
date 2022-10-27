@@ -56,7 +56,8 @@ class UploaderWorker(QueueProcWorker):
         :rtype: str
         """
         mp4_path = h264_path.replace('.h264', '.mp4')
-        command = ['ffmpeg', '-r', str(self.defs.FRAMERATE), '-i', h264_path, '-threads', '1', '-c:v', 'copy', '-r',
+        command = ['ffmpeg', '-analyzeduration', '100', '-probesize', '10000000', '-r',
+                   str(self.defs.FRAMERATE), '-i', h264_path, '-threads', '1', '-c:v', 'copy', '-r',
                    str(self.defs.FRAMERATE), mp4_path]
         try:
             out = subprocess.run(command, capture_output=True, encoding='utf-8')

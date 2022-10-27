@@ -124,7 +124,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         with open(dets_path, 'w') as f:
             for bbox in [d.bbox for d in fish_dets]:
                 f.write(f'0 {(bbox.xmax+bbox.xmin)/(2*w)} '
-                        f'{(bbox.ymax-bbox.ymin)/(2*h)} '
+                        f'{(bbox.ymax+bbox.ymin)/(2*h)} '
                         f'{(bbox.xmax-bbox.xmin)/w} '
                         f'{(bbox.ymax - bbox.ymin)/h}\n')
 
