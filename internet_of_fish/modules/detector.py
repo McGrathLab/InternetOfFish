@@ -188,6 +188,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
 
     def jpgs_to_mp4(self, img_paths, fps=30, delete_jpgs=True):
         """convert a series of jpgs to a single mp4, and (if delete_jpgs) delete the original images"""
+        self.logger.debug(f'converting {len(img_paths)} images to a clip at {fps} fps')
         if not img_paths:
             return
         dest_dir = self.defs.PROJ_VID_DIR
