@@ -96,7 +96,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
                 self.logger.debug('saving an image for annotation')
                 self.save_for_anno(img, cap_time, fish_dets)
         if hit_flag:
-            modifier = sum([det.score for det in fish_dets])
+            modifier = sum([(det.score - self.defs.CONF_THRESH) / (1 - self.defs.CONF_THRESH) for det in fish_dets])
             self.hit_counter.increment(modifier)
             self.logger.debug(f'hit count increased to {self.hit_counter.hits}. {self.HIT_THRESH} required to trigger')
         else:
