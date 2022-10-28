@@ -101,7 +101,6 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         else:
             self.hit_counter.decrement()
         if self.mock_hit_flag or self.hit_counter.hits >= self.HIT_THRESH:
-            self.mock_hit_flag = False
             self.logger.info(f"Hit counter reached {self.hit_counter.hits}, possible spawning event")
             img_paths = [self.overlay_boxes(be) for be in self.buffer]
             vid_path = self.jpgs_to_mp4(img_paths, 1//self.INTERVAL_SECS)
@@ -110,7 +109,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             if not self.mock_hit_flag:
                 msg = f'possible spawning event in {self.metadata["tank_id"]} at {gen_utils.current_time_iso()}'
                 self.event_q.safe_put(mptools.EventMessage(self.name, 'NOTIFY', ['SPAWNING_EVENT', msg, vid_path]))
-
+            self.mock_hit_flag = False
             self.hit_counter.reset()
             self.buffer = []
         if len(self.buffer) > self.IMG_BUFFER:
