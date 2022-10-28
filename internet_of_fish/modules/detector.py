@@ -23,8 +23,8 @@ class HitCounter:
         self.decay_rate = 0.5
         self.growth_rate = 1.0
 
-    def increment(self):
-        self.hits += self.growth_rate
+    def increment(self, modifier=1.0):
+        self.hits += (self.growth_rate * modifier)
 
     def decrement(self):
         self.hits = max(0.0, self.hits - self.decay_rate)
@@ -96,7 +96,8 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
                 self.logger.debug('saving an image for annotation')
                 self.save_for_anno(img, cap_time, fish_dets)
         if hit_flag:
-            self.hit_counter.increment()
+            modifier = sum([det.score for det in fish_dets])
+            self.hit_counter.increment(modifier)
             self.logger.debug(f'hit count increased to {self.hit_counter.hits}. {self.HIT_THRESH} required to trigger')
         else:
             self.hit_counter.decrement()
