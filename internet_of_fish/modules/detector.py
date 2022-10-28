@@ -95,7 +95,11 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             ):
                 self.logger.debug('saving an image for annotation')
                 self.save_for_anno(img, cap_time, fish_dets)
-        self.hit_counter.increment() if hit_flag else self.hit_counter.decrement()
+        if hit_flag:
+            self.hit_counter.increment()
+            self.logger.debug(f'hit count increased to {self.hit_counter.hits}. {self.HIT_THRESH} required to trigger')
+        else:
+            self.hit_counter.decrement()
         if self.mock_hit_flag or self.hit_counter.hits >= self.HIT_THRESH:
             self.mock_hit_flag = False
             self.logger.info(f"Hit counter reached {self.hit_counter.hits}, possible spawning event")
