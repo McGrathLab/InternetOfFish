@@ -24,10 +24,10 @@ class HitCounter:
         self.growth_rate = 1.0
 
     def increment(self):
-        self.hits += (1.0 * self.growth_rate)
+        self.hits += self.growth_rate
 
     def decrement(self):
-        self.hits = max(0.0, self.hits - (1 * self.decay_rate))
+        self.hits = max(0.0, self.hits - self.decay_rate)
 
     def reset(self):
         self.hits = 0.0
