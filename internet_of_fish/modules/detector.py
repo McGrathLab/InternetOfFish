@@ -20,7 +20,7 @@ class HitCounter:
 
     def __init__(self):
         self.hits = 0.0
-        self.decay_rate = 0.5
+        self.decay_rate = 0.25
         self.growth_rate = 1.0
 
     def increment(self, modifier=1.0):
