@@ -11,7 +11,8 @@ from internet_of_fish.modules import definitions
 def tar_directory(dir_path, new_name=None):
     dir_path = pathlib.Path(dir_path)
     if not dir_path.exists() or not dir_path.is_dir() or not any(dir_path.iterdir()):
-        print(f'invalid target for tarring: {dir_path}')
+        print(f'invalid target for tarring: {dir_path}. d.exists={dir_path.exists()}, d.is_dir={dir_path.is_dir()}, '
+              f'any(d.iterdir())={any(dir_path.iterdir())}')
         return
     if not new_name:
         new_name = dir_path.name + '.tar'
