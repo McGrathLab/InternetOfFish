@@ -12,14 +12,13 @@ def tar_directory(dir_path, new_name=None):
     dir_path = pathlib.Path(dir_path)
     if not dir_path.exists() or not dir_path.is_dir() or not any(dir_path.iterdir()):
         return
-    par_dir = dir_path.parent
     if not new_name:
         new_name = dir_path.name + '.tar'
     elif new_name.endswith('.tar'):
         new_name = new_name + '.tar'
     new_name = pathlib.Path(new_name)
-    if not new_name.is_relative_to(par_dir):
-        new_name = par_dir / new_name
+    if not new_name.is_relative_to(dir_path):
+        new_name = dir_path / new_name
     with tarfile.open(new_name, 'w') as tarball:
         for f in dir_path.iterdir():
             tarball.add(f)
