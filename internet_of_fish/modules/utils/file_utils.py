@@ -21,7 +21,7 @@ def tar_directory(dir_path, new_name=None):
     new_name = dir_path / new_name
     with tarfile.open(new_name, 'w') as tarball:
         for f in dir_path.iterdir():
-            if f.suffix is '.tar':
+            if f.suffix == '.tar':
                 continue
             tarball.add(f)
             f.unlink()
