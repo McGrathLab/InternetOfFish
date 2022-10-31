@@ -4,8 +4,25 @@ import pathlib
 import subprocess as sp
 import json
 from glob import glob
-
+import tarfile
 from internet_of_fish.modules import definitions
+
+
+def tar_directory(dir_path, new_name=None):
+    dir_path = pathlib.Path(dir_path)
+    par_dir = dir_path.parent
+    if not new_name:
+        new_name = dir_path.name + '.tar'
+    elif new_name.endswith('.tar'):
+        new_name = new_name + '.tar'
+    new_name = pathlib.Path(new_name)
+    if not new_name.is_relative_to(par_dir):
+        new_name = par_dir / new_name
+    with tarfile.open(new_name, 'w') as tarball:
+        for f in dir_path.iterdir():
+            tarball.add(f)
+            f.unlink()
+    return new_name
 
 
 def locate_newest_json():
