@@ -235,7 +235,7 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
 
         upload_list = []
         upload_list.extend(glob.glob(os.path.join(proj_dir, '*.json')))
-        upload_list.extend(glob.glob(os.path.join(proj_dir, '*.tar')))
+        upload_list.extend(glob.glob(os.path.join(proj_anno_dir, '*.tar')))
         upload_list.extend(glob.glob(os.path.join(proj_vid_dir, '*.h264')))
         upload_list.extend(glob.glob(os.path.join(proj_vid_dir, '*.mp4')))
         upload_list.extend(glob.glob(os.path.join(proj_vid_dir, '*.avi')))
