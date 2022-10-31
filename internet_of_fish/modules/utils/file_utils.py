@@ -10,6 +10,8 @@ from internet_of_fish.modules import definitions
 
 def tar_directory(dir_path, new_name=None):
     dir_path = pathlib.Path(dir_path)
+    if not dir_path.exists() or not dir_path.is_dir() or not any(dir_path.iterdir()):
+        return
     par_dir = dir_path.parent
     if not new_name:
         new_name = dir_path.name + '.tar'
