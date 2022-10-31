@@ -16,9 +16,7 @@ def tar_directory(dir_path, new_name=None):
         new_name = dir_path.name + '.tar'
     elif new_name.endswith('.tar'):
         new_name = new_name + '.tar'
-    new_name = pathlib.Path(new_name)
-    if not new_name.is_relative_to(dir_path):
-        new_name = dir_path / new_name
+    new_name = dir_path / new_name
     with tarfile.open(new_name, 'w') as tarball:
         for f in dir_path.iterdir():
             if f.suffix is '.tar':
