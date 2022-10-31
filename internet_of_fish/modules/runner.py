@@ -231,7 +231,8 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
         proj_img_dir = definitions.PROJ_IMG_DIR(proj_id, analysis_state)
         proj_anno_dir = definitions.PROJ_ANNO_DIR(proj_id, analysis_state)
         self.logger.debug('tarring annotation directory')
-        file_utils.tar_directory(proj_anno_dir, new_name=str(dt.date.today()))
+        tar_dest = file_utils.tar_directory(proj_anno_dir, new_name=str(dt.date.today()))
+        self.logger.debug(f'annotation directory tarred into {tar_dest}')
 
         upload_list = []
         upload_list.extend(glob.glob(os.path.join(proj_dir, '*.json')))
