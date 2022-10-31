@@ -23,7 +23,7 @@ def tar_directory(dir_path, new_name=None):
         for f in dir_path.iterdir():
             if f.suffix == '.tar':
                 continue
-            tarball.add(f)
+            tarball.add(f, arcname=f.name)
             f.unlink()
     return new_name
 
