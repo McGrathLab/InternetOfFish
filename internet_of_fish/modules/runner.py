@@ -230,12 +230,14 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
         proj_vid_dir = definitions.PROJ_VID_DIR(proj_id, analysis_state)
         proj_img_dir = definitions.PROJ_IMG_DIR(proj_id, analysis_state)
         proj_anno_dir = definitions.PROJ_ANNO_DIR(proj_id, analysis_state)
+        proj_hit_record_dir = definitions.PROJ_HIT_RECORD_DIR(proj_id, analysis_state)
         self.logger.debug('tarring annotation directory')
         tar_dest = file_utils.tar_directory(proj_anno_dir, new_name=str(dt.date.today()))
         self.logger.debug(f'annotation directory tarred into {tar_dest}')
 
         upload_list = []
         upload_list.extend(glob.glob(os.path.join(proj_dir, '*.json')))
+        upload_list.extend(glob.glob(os.path.join(proj_hit_record_dir, '*.csv')))
         upload_list.extend(glob.glob(os.path.join(proj_anno_dir, '*.tar')))
         upload_list.extend(glob.glob(os.path.join(proj_vid_dir, '*.h264')))
         upload_list.extend(glob.glob(os.path.join(proj_vid_dir, '*.mp4')))
