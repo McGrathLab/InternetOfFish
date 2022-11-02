@@ -54,4 +54,4 @@ def PROJ_JSON_FILE(proj_id, analysis_state=None):
 
 
 def PROJ_HIT_RECORD_DIR(proj_id, analysis_state=None):
-    return os.path.join(PROJ_DIR(proj_id, analysis_state), 'HIT_RECORDS')
+    return os.path.join(PROJ_DIR(proj_id, analysis_state), 'HitRecords')

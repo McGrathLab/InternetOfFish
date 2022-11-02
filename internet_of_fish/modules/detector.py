@@ -50,7 +50,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.max_fish = self.metadata['n_fish'] if self.metadata['n_fish'] else self.defs.MAX_DETS
         self.img_dir = self.defs.PROJ_IMG_DIR
         self.anno_dir = self.defs.PROJ_ANNO_DIR
-        self.count_record = open(os.path.join(self.defs.PROJ_HIT_RECORD_DIR, f'{gen_utils.current_time_iso()}.csv'))
+        self.count_record = open(os.path.join(self.defs.PROJ_HIT_RECORD_DIR, f'{gen_utils.current_time_iso()}.csv'), 'w')
         self.count_buffer = ['time_ms,count']
         self.mock_hit_flag = False
 
