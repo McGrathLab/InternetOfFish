@@ -36,7 +36,7 @@ def new_project(**kwargs):
 
 def existing_projects():
     existing_jsons = glob(os.path.join(definitions.DATA_DIR, '**', '*.json'), recursive=True)
-    proj_ids = [os.path.dirname(os.path.basename(j_path)) for j_path in existing_jsons]
+    proj_ids = [os.path.basename(os.path.dirname(j_path)) for j_path in existing_jsons]
     return proj_ids
 
 
