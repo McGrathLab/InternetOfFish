@@ -96,7 +96,7 @@ class OptDict:
             else:
                 retval = self.opts[selection].execute()
                 print(retval)
-                return retval
+                yield retval
 
 
 class UI:
