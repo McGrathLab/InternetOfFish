@@ -70,7 +70,7 @@ def upload(local_path, progress=False):
         return None
     if progress:
         cmnd.append('-P')
-    out = sp.run(cmnd, capture_output=True, encoding='utf-8')
+    out = sp.run(cmnd, stderr=sp.PIPE, encoding='utf-8')
     return out
 
 
@@ -82,7 +82,7 @@ def upload_and_delete(local_path, progress=False, delete_jsons=True):
         cmnd.extend(['--exclude', '*.json'])
     if progress:
         cmnd.append('-P')
-    out = sp.run(cmnd, capture_output=True, encoding='utf-8')
+    out = sp.run(cmnd, stderr=sp.PIPE, encoding='utf-8')
     return out
 
 
