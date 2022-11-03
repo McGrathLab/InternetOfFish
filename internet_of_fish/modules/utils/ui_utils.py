@@ -162,7 +162,4 @@ def pause_project():
     kill_processes()
 
 
-def upload_project(delete_json=False):
-
-
 
