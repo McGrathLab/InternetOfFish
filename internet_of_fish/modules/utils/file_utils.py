@@ -59,16 +59,34 @@ def create_project_tree(proj_id, analysis_state):
             os.makedirs(path)
 
 
-def upload(local_path):
+def upload(local_path, progress=False):
     rel = os.path.relpath(local_path, definitions.HOME_DIR)
     cloud_path = str(pathlib.PurePosixPath(definitions.CLOUD_HOME_DIR) / pathlib.PurePath(rel))
     if os.path.isfile(local_path):
-        out = sp.run(['rclone', 'copy', local_path, os.path.dirname(cloud_path)], capture_output=True, encoding='utf-8')
+        cmnd = ['rclone', 'copy', local_path, os.path.dirname(cloud_path)]
     elif os.path.isdir(local_path):
-        out = sp.run(['rclone', 'copy', local_path, cloud_path], capture_output=True, encoding='utf-8')
+        cmnd = ['rclone', 'copy', local_path, cloud_path]
     else:
         return None
-    return out
+    if progress:
+        cmnd.append('-P')
+    err = sp.run(cmnd, stderr=sp.PIPE, encoding='utf-8')
+    return err
+
+
+def upload_and_delete(local_path, progress=False, delete_jsons=True):
+    rel = os.path.relpath(local_path, definitions.HOME_DIR)
+    cloud_path = str(pathlib.PurePosixPath(definitions.CLOUD_HOME_DIR) / pathlib.PurePath(rel))
+    cmnd = ['rclone', 'moveto', local_path, cloud_path]
+    if not delete_jsons:
+        cmnd.extend(['--exclude', '*.json'])
+    if progress:
+        cmnd.extend('-P')
+    err = sp.run(cmnd, stderr=sp.PIPE, encoding='utf-8')
+    return err
+
+
+
 
 
 def download(cloud_path=None):

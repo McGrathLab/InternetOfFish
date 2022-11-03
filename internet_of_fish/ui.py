@@ -11,8 +11,8 @@ from internet_of_fish.modules.utils import gen_utils, ui_utils, file_utils
 from internet_of_fish.modules import metadata
 from internet_of_fish.modules import mptools
 from internet_of_fish.modules import runner
+from internet_of_fish.modules import definitions
 import colorama
-from typing import Callable, Any
 colorama.init(autoreset=True)
 
 
@@ -41,7 +41,7 @@ class Opt:
         try:
             args = (arg if not callable(arg) else arg() for arg in self.args)
             kwargs = {key: val if not callable(val) else val() for (key, val) in self.kwargs.items()}
-            self.action(*args, **kwargs)
+            return self.action(*args, **kwargs)
         except Exception as e:
             print(f'failed to execute "{self.opt_str}" with error {e}')
 
@@ -94,7 +94,7 @@ class OptDict:
             if selection == '0' and self.stepout_opt:
                 break
             else:
-                self.opts[selection].execute()
+                return self.opts[selection].execute()
 
 
 class UI:
@@ -159,6 +159,12 @@ class UI:
         utils_menu.update(Opt('clear the log files', ui_utils.clear_logs))
         utils_menu.update(Opt('capture and upload a short video clip', self.quick_clip))
 
+        upload_menu = OptDict()
+        upload_menu.update(Opt('upload all data from this device and delete all local copies', self.upload_data, delete_jsons=True))
+        upload_menu.update(Opt('upload all data from this device and delete local copies, but keep .json files', self.upload_data, delete_jsons=False))
+        upload_menu.update(Opt('upload data from a specific project and delete local copies', self.upload_data, delete_jsons=False, query_user=True))
+        upload_menu.update(Opt('upload data from a specific project and delete local copies, but keep.json files', self.upload_data, delete_jsons=False, query_user=True))
+
         main_menu = OptDict(stepout_opt=False)
         main_menu.update(Opt('exit the application', self.goodbye))
         main_menu.update(Opt('create a new project', new_project_menu.query))
@@ -167,7 +173,7 @@ class UI:
         main_menu.update(Opt('start the currently active project', self.start_project))
         main_menu.update(Opt('get additional info about the currently active project', project_info_menu.query))
         main_menu.update(Opt('change the currently active project', self.change_active_project))
-        main_menu.update(Opt('upload all data from this device and delete local copies', self.end_project))
+        main_menu.update(Opt('upload all data from this device', upload_menu.query))
         main_menu.update(Opt('view additional utilities', utils_menu.query))
 
         return {'main_menu': main_menu, 'new_project_menu': new_project_menu, 'device_info_menu': device_info_menu,
@@ -256,7 +262,22 @@ class UI:
         time.sleep(5)
         ui_utils.inject_override('ENTER_PASSIVE_MODE')
         print('clip collected. Uploading in background')
-        
+
+    def upload_data(self, delete_jsons=False, query_user=False):
+        upload_targets = ui_utils.existing_projects(full_paths=True)
+        if not upload_targets:
+            print('no valid projects found')
+            return
+        if query_user:
+            select_project_menu = OptDict(prompt='select which project you want to upload')
+            for target in upload_targets:
+                select_project_menu.update(Opt(os.path.basename(target), lambda: target))
+            upload_targets = [select_project_menu.query()]
+        for target in upload_targets:
+            print(f'uploading {os.path.basename(target)}')
+            file_utils.upload_and_delete(target, progress=True, delete_jsons=delete_jsons)
+
+
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
