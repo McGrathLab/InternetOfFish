@@ -1,4 +1,8 @@
 #!/bin/bash
+touch ~/HARD_SHUTDOWN
+sleep 10
+rm -f ~/HARD_SHUTDOWN
+killall screen
 echo automatically initiating data collection
 cd ~/InternetOfFish
 git reset --hard HEAD

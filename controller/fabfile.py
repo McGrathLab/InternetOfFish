@@ -29,6 +29,8 @@ fab pull       | run "git pull" on every host to update the InternetOfFish repos
                | have already been configured
 fab clone      | clone the InternetOfFish repo to each host. Does not require that the host has been configured, only
                | that it has a functioning OS that recognizes git and can be reached over ssh.
+fab update     | pause any activate projects, shut down the application, kill all screens, update the repo to the latest
+               | version, and finally resume data collection on the active project
 fab run        | for advanced use only. Allows for any command to be run on each host. Uses the syntax 
                |"fab run --cmd='xxx'", replacing xxx with the desired command. Commands with spaces must be enclosed in
                |quotes. Multiple commands can be chained using the usual bash symbols (;, ||, and &&).
@@ -126,11 +128,14 @@ def config(c):
     except Exception as e:
         print(f'config failed with error: {e}')
 
+
+@task(hosts=MY_HOSTS)
+def update(c):
+    c.run('bash ~/InternetOfFish/bin/update.sh')
+
+
 @task(hosts=MY_HOSTS)
 def run(c, cmd=''):
     if not cmd:
         return
     c.run(cmd)
-
-
-

@@ -11,7 +11,6 @@ from internet_of_fish.modules.utils import gen_utils, ui_utils, file_utils
 from internet_of_fish.modules import metadata
 from internet_of_fish.modules import mptools
 from internet_of_fish.modules import runner
-from internet_of_fish.modules import definitions
 import colorama
 colorama.init(autoreset=True)
 
