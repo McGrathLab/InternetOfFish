@@ -173,7 +173,7 @@ class UI:
         main_menu.update(Opt('start the currently active project', self.start_project))
         main_menu.update(Opt('get additional info about the currently active project', project_info_menu.query))
         main_menu.update(Opt('change the currently active project', self.change_active_project))
-        main_menu.update(Opt('upload all data from this device', upload_menu.query))
+        main_menu.update(Opt('view upload utilities', upload_menu.query))
         main_menu.update(Opt('view additional utilities', utils_menu.query))
 
         return {'main_menu': main_menu, 'new_project_menu': new_project_menu, 'device_info_menu': device_info_menu,
@@ -275,7 +275,9 @@ class UI:
             upload_targets = [select_project_menu.query()]
         for target in upload_targets:
             print(f'uploading {os.path.basename(target)}')
-            file_utils.upload_and_delete(target, progress=True, delete_jsons=delete_jsons)
+            err = file_utils.upload_and_delete(target, progress=True, delete_jsons=delete_jsons)
+            if err:
+                print(f'failed to upload {os.path.basename(target)} with error {err}')
 
 
 if __name__ == '__main__':
