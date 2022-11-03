@@ -81,7 +81,7 @@ def upload_and_delete(local_path, progress=False, delete_jsons=True):
     if not delete_jsons:
         cmnd.extend(['--exclude', '*.json'])
     if progress:
-        cmnd.extend('-P')
+        cmnd.append('-P')
     err = sp.run(cmnd, stderr=sp.PIPE, encoding='utf-8')
     return err
 

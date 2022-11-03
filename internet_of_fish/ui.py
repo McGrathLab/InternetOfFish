@@ -271,7 +271,7 @@ class UI:
         if query_user:
             select_project_menu = OptDict(prompt='select which project you want to upload')
             for target in upload_targets:
-                select_project_menu.update(Opt(os.path.basename(target), lambda: target))
+                select_project_menu.update(Opt(os.path.basename(target), lambda x: x, target))
             upload_targets = [select_project_menu.query()]
         for target in upload_targets:
             print(f'uploading {os.path.basename(target)}')
