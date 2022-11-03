@@ -94,7 +94,9 @@ class OptDict:
             if selection == '0' and self.stepout_opt:
                 break
             else:
-                self.opts[selection].execute()
+                retval = self.opts[selection].execute()
+                print(retval)
+                return retval
 
 
 class UI:
