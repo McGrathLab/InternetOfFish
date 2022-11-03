@@ -94,10 +94,7 @@ class OptDict:
             if selection == '0' and self.stepout_opt:
                 break
             else:
-                retval = self.opts[selection].execute()
-                print(retval)
-                yield retval
-
+                self.opts[selection].execute()
 
 class UI:
 
@@ -273,13 +270,12 @@ class UI:
         if query_user:
             select_project_menu = OptDict(prompt='select which project you want to upload')
             for target in upload_targets:
-                select_project_menu.update(Opt(os.path.basename(target), lambda x: x, target))
-            upload_targets = [select_project_menu.query()]
-        for target in upload_targets:
-            print(f'uploading {os.path.basename(target)}')
-            out = file_utils.upload_and_delete(target, progress=True, delete_jsons=delete_jsons)
-            if out.stderr:
-                print(f'failed to upload {os.path.basename(target)} with error {out.stderr}')
+                select_project_menu.update(Opt(os.path.basename(target), file_utils.upload_and_delete, target,
+                                               progress=True, delete_jsons=delete_jsons))
+            select_project_menu.query()
+        else:
+            for target in upload_targets:
+                file_utils.upload_and_delete(target, delete_jsons=delete_jsons, progress=True)
 
 
 if __name__ == '__main__':

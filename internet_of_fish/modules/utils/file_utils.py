@@ -75,6 +75,7 @@ def upload(local_path, progress=False):
 
 
 def upload_and_delete(local_path, progress=False, delete_jsons=True):
+    print(f'uploading {os.path.basename(local_path)}')
     rel = os.path.relpath(local_path, definitions.HOME_DIR)
     cloud_path = str(pathlib.PurePosixPath(definitions.CLOUD_HOME_DIR) / pathlib.PurePath(rel))
     cmnd = ['rclone', 'moveto', local_path, cloud_path]
@@ -83,6 +84,8 @@ def upload_and_delete(local_path, progress=False, delete_jsons=True):
     if progress:
         cmnd.append('-P')
     out = sp.run(cmnd, stderr=sp.PIPE, encoding='utf-8')
+    if out.stderr:
+        print(f'failed to upload {os.path.basename(local_path)} with error {out.stderr}')
     return out
 
 
