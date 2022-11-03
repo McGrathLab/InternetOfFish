@@ -94,7 +94,7 @@ class OptDict:
             if selection == '0' and self.stepout_opt:
                 break
             else:
-                return self.opts[selection].execute()
+                self.opts[selection].execute()
 
 
 class UI:
