@@ -275,9 +275,9 @@ class UI:
             upload_targets = [select_project_menu.query()]
         for target in upload_targets:
             print(f'uploading {os.path.basename(target)}')
-            err = file_utils.upload_and_delete(target, progress=True, delete_jsons=delete_jsons)
-            if err:
-                print(f'failed to upload {os.path.basename(target)} with error {err}')
+            out = file_utils.upload_and_delete(target, progress=True, delete_jsons=delete_jsons)
+            if out.stderr:
+                print(f'failed to upload {os.path.basename(target)} with error {out.stderr}')
 
 
 if __name__ == '__main__':
