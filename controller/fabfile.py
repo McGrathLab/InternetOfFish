@@ -131,6 +131,7 @@ def config(c):
 
 @task(hosts=MY_HOSTS)
 def update(c):
+    print(f'updating {c.host}')
     c.run('bash ~/InternetOfFish/bin/update.sh')
 
 
