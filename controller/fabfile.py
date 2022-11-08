@@ -131,7 +131,17 @@ def config(c):
 
 @task(hosts=MY_HOSTS)
 def update(c):
-    c.run('bash ~/InternetOfFish/bin/update.sh')
+    print(f'Pulling to {c.host}')
+    try:
+        with c.cd('/home/pi/InternetOfFish'):
+            c.run('git reset --hard HEAD')
+            c.run('git pull')
+            print('restarting IOF and resuming data collection')
+            c.run('bash ~/InternetOfFish/bin/update.sh')
+    except Exception as e:
+        print(f'pull failed: {e}')
+
+
 
 
 @task(hosts=MY_HOSTS)
