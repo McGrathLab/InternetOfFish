@@ -51,7 +51,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.img_dir = self.defs.PROJ_IMG_DIR
         self.anno_dir = self.defs.PROJ_ANNO_DIR
         self.count_record = open(os.path.join(self.defs.PROJ_HIT_RECORD_DIR, f'{gen_utils.current_time_iso()}.csv'), 'w')
-        self.count_buffer = ['time_ms,count']
+        self.count_buffer = ['time_ms,count\n']
         self.mock_hit_flag = False
 
         model_paths = glob(os.path.join(self.MODELS_DIR, self.metadata['model_id'], '*.tflite'))
@@ -103,7 +103,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             self.logger.debug(f'hit count increased to {self.hit_counter.hits}. {self.HIT_THRESH} required to trigger')
         else:
             self.hit_counter.decrement()
-        self.count_buffer.append(f'{cap_time},{self.hit_counter.hits:0.2f}')
+        self.count_buffer.append(f'{cap_time},{self.hit_counter.hits:0.2f}\n')
         if self.mock_hit_flag or self.hit_counter.hits >= self.HIT_THRESH:
             self.logger.info(f"Hit counter reached {self.hit_counter.hits}, possible spawning event")
             img_paths = [self.overlay_boxes(be) for be in self.buffer]
@@ -141,8 +141,11 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             self.logger.info(f'{self.loop_counter} detection loops completed. average deteciton time for last '
                              f'{self.avg_timer.count} loops was {self.avg_timer.avg * 1000}ms')
             self.avg_timer.reset()
-            self.count_record.writelines(self.count_buffer)
-            self.count_buffer = []
+            self.write_hit_buffer_to_file()
+
+    def write_hit_buffer_to_file(self):
+        self.count_record.writelines(self.count_buffer)
+        self.count_buffer = []
 
     def update_pipe_location(self, img):
         new_loc = self.detect(img, interp=self.pipe_interpreter, update_timer=False)
