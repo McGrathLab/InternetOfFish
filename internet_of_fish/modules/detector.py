@@ -105,7 +105,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         else:
             self.hit_counter.decrement()
         self.count_buffer.append(f'{cap_time},{self.hit_counter.hits:0.2f}\n')
-        if self.mock_hit_flag or self.hit_counter.hits >= self.HIT_THRESH:
+        if ((self.hit_counter.hits >= self.HIT_THRESH) or self.mock_hit_flag) and (len(self.buffer) >= self.IMG_BUFFER):
             self.logger.info(f"Hit counter reached {self.hit_counter.hits}, possible spawning event")
             img_paths = []
             for be in self.buffer:
