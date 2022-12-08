@@ -2,12 +2,11 @@ import os, logging, time
 from collections import namedtuple
 
 from glob import glob
-import numpy as np
 import cv2
+from math import dist
 
 from pycoral.adapters import common
 from pycoral.adapters import detect
-from pycoral.utils.dataset import read_label_file
 from pycoral.utils.edgetpu import make_interpreter, run_inference
 
 import internet_of_fish.modules.utils.advanced_utils
@@ -47,6 +46,9 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
 
     def startup(self):
         self.pipe_det = None
+        self.pipe_center = None
+        self.pipe_radius = None
+        self.force_pipe_update = True
         self.max_fish = self.metadata['n_fish'] if self.metadata['n_fish'] else self.defs.MAX_DETS
         self.img_dir = self.defs.PROJ_IMG_DIR
         self.anno_dir = self.defs.PROJ_ANNO_DIR
@@ -81,12 +83,13 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         if isinstance(img, str) and (img == 'MOCK_HIT'):
             self.mock_hit_flag = True
             return
-        if not self.loop_counter % 100 or not self.pipe_det:
+        if not self.loop_counter % 100 or not self.pipe_det or self.force_pipe_update:
             self.update_pipe_location(img)
             if not self.pipe_det:
                 return
         img = img[self.pipe_det.bbox.ymin:self.pipe_det.bbox.ymax, self.pipe_det.bbox.xmin: self.pipe_det.bbox.xmax]
         fish_dets = sorted(self.detect(img), reverse=True, key=lambda x: x.score)
+        fish_dets = self.filter_fish_dets(fish_dets)
         self.buffer.append(BufferEntry(cap_time, img, fish_dets))
         hit_flag = len(fish_dets) >= 2
         if len(fish_dets) >= 1:
@@ -124,6 +127,15 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.loop_counter += 1
         self.print_info()
 
+    def filter_fish_dets(self, fish_dets):
+        valid_dets = []
+        for det in fish_dets:
+            det_center = [(det.bbox.xmax - det.bbox.xmin) / 2, (det.bbox.ymax - det.bbox.ymin) / 2]
+            radial_dist = dist(det_center, self.pipe_center)
+            if radial_dist < self.pipe_radius:
+                valid_dets.append(det)
+        return valid_dets
+
     def save_for_anno(self, img, cap_time, fish_dets):
         img_path = os.path.join(self.anno_dir, f'{cap_time}.jpg')
         dets_path = os.path.join(self.anno_dir, f'{cap_time}.txt')
@@ -151,22 +163,28 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.count_buffer = []
 
     def update_pipe_location(self, img):
+        self.logger.debug('updating pipe location')
         new_loc = self.detect(img, interp=self.pipe_interpreter, update_timer=False)
         if not new_loc:
-            self.logger.debug('attempted to update pipe location but pipe was not detected. keeping old location')
+            self.logger.debug('attempted to update pipe location but pipe was not detected. Will try again on next frame')
+            self.force_pipe_update = True
             return
+        old_loc = self.pipe_det
+        self.pipe_det = sorted(new_loc, reverse=True, key=lambda x: x.score)[0]
+        self.pipe_center = [(self.pipe_det.bbox.xmax - self.pipe_det.bbox.xmin) / 2,
+                            (self.pipe_det.bbox.ymax - self.pipe_det.bbox.ymin) / 2]
+        self.pipe_radius = min(self.pipe_det.bbox.width, self.pipe_det.bbox.height) / 2
+        if not old_loc:
+            self.force_pipe_update = True
+            return
+        iou = detect.BBox.iou(old_loc.bbox, self.pipe_det.bbox)
+        if iou < 0.95:
+            self.logger.info(f'low IOU score detected. Pipe locator will rerun until IOU is above 0.95')
+            self.force_pipe_update = True
         else:
-            old_loc = self.pipe_det
-            self.pipe_det = sorted(new_loc, reverse=True, key=lambda x: x.score)[0]
-            if old_loc:
-                iou = detect.BBox.iou(old_loc.bbox, self.pipe_det.bbox)
-                self.logger.debug(f'pipe location updated. Confidence of {self.pipe_det.score}.'
-                                  f' IOU with previous location of {iou}')
-                if iou < 0.95:
-                    self.logger.info(f'low IOU score detected. Rerunning pipe locator until IOU is above 0.95')
-                    self.update_pipe_location(img)
-            else:
-                self.update_pipe_location(img)
+            self.logger.debug(f'pipe location updated. Confidence of {self.pipe_det.score}.'
+                              f' IOU with previous location of {iou}')
+            self.force_pipe_update = False
 
     def detect(self, img, interp=None, update_timer=True):
         """run detection on a single image"""
