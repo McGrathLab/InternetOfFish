@@ -211,7 +211,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         img = cv2.cvtColor(buffer_entry.img, cv2.COLOR_RGB2BGR)
         for det in buffer_entry.fish_dets:
             overlay_box(img, det, (0, 255, 0))
-
+        cv2.circle(img, self.pipe_center, self.pipe_radius, (0, 255, 0))
         img_path = os.path.join(self.img_dir, f'{buffer_entry.cap_time}.jpg')
         cv2.imwrite(img_path, img)
         return img_path
