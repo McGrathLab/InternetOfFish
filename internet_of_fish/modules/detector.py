@@ -3,7 +3,7 @@ from collections import namedtuple
 
 from glob import glob
 import cv2
-from math import dist
+from math import sqrt
 
 from pycoral.adapters import common
 from pycoral.adapters import detect
@@ -131,7 +131,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         valid_dets = []
         for det in fish_dets:
             det_center = [(det.bbox.xmax - det.bbox.xmin) / 2, (det.bbox.ymax - det.bbox.ymin) / 2]
-            radial_dist = dist(det_center, self.pipe_center)
+            radial_dist = sqrt((det_center[0] - self.pipe_center[0])**2 + (det_center[1] - self.pipe_center[1])**2)
             if radial_dist < self.pipe_radius:
                 valid_dets.append(det)
         return valid_dets
