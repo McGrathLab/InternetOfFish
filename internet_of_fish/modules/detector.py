@@ -131,7 +131,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
     def filter_fish_dets(self, fish_dets):
         valid_dets = []
         for det in fish_dets:
-            det_center = ((det.bbox.xmax - det.bbox.xmin) / 2, (det.bbox.ymax - det.bbox.ymin) / 2)
+            det_center = [(det.bbox.xmax - det.bbox.xmin) / 2, (det.bbox.ymax - det.bbox.ymin) / 2]
             radial_dist = sqrt((det_center[0] - self.pipe_center[0])**2 + (det_center[1] - self.pipe_center[1])**2)
             if radial_dist < self.pipe_radius:
                 valid_dets.append(det)
@@ -172,8 +172,8 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             return
         old_loc = self.pipe_det
         self.pipe_det = sorted(new_loc, reverse=True, key=lambda x: x.score)[0]
-        self.pipe_center = ((self.pipe_det.bbox.xmax - self.pipe_det.bbox.xmin) / 2,
-                            (self.pipe_det.bbox.ymax - self.pipe_det.bbox.ymin) / 2)
+        self.pipe_center = [(self.pipe_det.bbox.xmax - self.pipe_det.bbox.xmin) / 2,
+                            (self.pipe_det.bbox.ymax - self.pipe_det.bbox.ymin) / 2]
         self.pipe_radius = min(self.pipe_det.bbox.width, self.pipe_det.bbox.height) / 2
         if not old_loc:
             self.force_pipe_update = True
@@ -212,7 +212,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         img = cv2.cvtColor(buffer_entry.img, cv2.COLOR_RGB2BGR)
         for det in buffer_entry.fish_dets:
             overlay_box(img, det, (0, 255, 0))
-        int_pipe_center = (int(np.round(coord)) for coord in self.pipe_center)
+        int_pipe_center = [int(np.round(coord)) for coord in self.pipe_center]
         int_pipe_radius = int(np.round(self.pipe_radius))
         cv2.circle(img, int_pipe_center, int_pipe_radius, (0, 255, 0), 2)
         img_path = os.path.join(self.img_dir, f'{buffer_entry.cap_time}.jpg')
