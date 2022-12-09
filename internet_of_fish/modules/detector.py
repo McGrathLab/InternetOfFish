@@ -131,7 +131,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
     def filter_fish_dets(self, fish_dets):
         valid_dets = []
         for det in fish_dets:
-            det_center = [(det.bbox.xmax - det.bbox.xmin) / 2, (det.bbox.ymax - det.bbox.ymin) / 2]
+            det_center = [(det.bbox.xmax + det.bbox.xmin) / 2, (det.bbox.ymax + det.bbox.ymin) / 2]
             radial_dist = sqrt((det_center[0] - self.pipe_center[0])**2 + (det_center[1] - self.pipe_center[1])**2)
             if radial_dist < self.pipe_radius:
                 valid_dets.append(det)
