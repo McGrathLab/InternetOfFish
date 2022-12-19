@@ -21,6 +21,10 @@ class UploaderWorker(QueueProcWorker):
         tries_left = self.defs.MAX_TRIES
         while not self.shutdown_event.is_set() and tries_left:
             if target.endswith('.h264'):
+                # delete tiny video fragments (~<1 frame long) that are occasionally produced
+                if os.path.getsize(target) < 100:
+                    os.remove(target)
+                    break
                 mp4_path = self.h264_to_mp4(target)
                 if mp4_path:
                     target = mp4_path
