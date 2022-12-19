@@ -139,6 +139,17 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
         self.secondary_ctx = mptools.SecondaryContext(self.metadata, self.event_q,
                                                       f'{target_mode.upper()}CONTEXT')
         self.curr_mode = target_mode
+        self.check_disk_usage()
+
+    def check_disk_usage(self):
+        self.logger.debug('checking disk usage')
+        du_stats = shutil.disk_usage(definitions.HOME_DIR)
+        du_fraction = du_stats.used / du_stats.total
+        if du_fraction > 0.5:
+            self.logger.info('disk usage higher than expected. Notifying user')
+            notification = notifier.Notification(self.name, 'LOW_DISK_SPACE_WARNING',
+                                                 f'WARNING: current disk usage at {du_fraction*100}%', None)
+            self.main_ctx.notification_q.safe_put(notification)
 
     def active_mode(self):
         self.switch_mode('active')

@@ -82,15 +82,16 @@ class NotifierWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             to_emails=self.user_email,
             subject=subject,
             html_content=notification.msg)
-        with open(notification.attachment_path, 'rb') as f:
-            data = f.read()
-        encoded = base64.b64encode(data).decode()
-        attachment = Attachment()
-        attachment.file_content = FileContent(encoded)
-        attachment.file_type = FileType('application/mp4')
-        attachment.file_name = FileName(os.path.basename(notification.attachment_path))
-        attachment.disposition = Disposition('attachment')
-        message.attachment = attachment
+        if notification.attachment_path:
+            with open(notification.attachment_path, 'rb') as f:
+                data = f.read()
+            encoded = base64.b64encode(data).decode()
+            attachment = Attachment()
+            attachment.file_content = FileContent(encoded)
+            attachment.file_type = FileType('application/mp4')
+            attachment.file_name = FileName(os.path.basename(notification.attachment_path))
+            attachment.disposition = Disposition('attachment')
+            message.attachment = attachment
         return message
 
 
