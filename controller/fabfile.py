@@ -31,12 +31,9 @@ fab clone      | clone the InternetOfFish repo to each host. Does not require th
                | that it has a functioning OS that recognizes git and can be reached over ssh.
 fab update     | pause any activate projects, shut down the application, kill all screens, update the repo to the latest
                | version, and finally resume data collection on the active project
-fab cleanup    | upload and delete all data from the device, shut down the application, kill all screens, update the
-               | repository, and reboot. Kind of like a factory reset, but preserves existing data. Data that can't be 
-               | uploaded will not be deleted. This command may take a very long time to run if there is a significant 
-               | amount of data stuck on the pi's, so it is recommended that you first manually delete any data 
-               | (especially videos) on the target pi's that you do not need, or log into the pi's individually and use
-               | the upload utilities in IOF to upload the data.
+fab cleanup    | trigger each device to upload and delete all data. Data that fails to upload will remain on the device.
+               | This command will run relatively quickly on the machine issuing it, but the devices themselves will
+               | likely be occupied for some time while the upload executes. 
 fab run        | for advanced use only. Allows for any command to be run on each host. Uses the syntax 
                |"fab run --cmd='xxx'", replacing xxx with the desired command. Commands with spaces must be enclosed in
                |quotes. Multiple commands can be chained using the usual bash symbols (;, ||, and &&).
