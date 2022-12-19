@@ -98,7 +98,7 @@ class OptDict:
 
 class UI:
 
-    def __init__(self, autostart=False):
+    def __init__(self, autostart=False, cleanup=False):
         """
         core class for mediating user-program interactions
         :param autostart: if True, the program effectively select 'start the currently active project' from the main
@@ -111,6 +111,9 @@ class UI:
         self.welcome()
         self.menus = self.init_menus()
         self.main_menu = self.menus['main_menu']
+        if cleanup:
+            self.upload_data(delete_jsons=True)
+            self.goodbye()
         if autostart:
             self.start_project()
         self.main_menu.query()
@@ -289,8 +292,12 @@ if __name__ == '__main__':
     parser.add_argument('-a', '--autostart', action='store_true',
                         help='equivalent to starting the ui and immediately choosing "start the currently active '
                              'project" from the main menu. Used primarily to start the application programmatically')
+    parser.add_argument('-c', '--cleanup', action='store_true',
+                        help='equivalent to starting the ui and then choosing "upload all data from this device and '
+                             'delete all local copies" from the upload menu. Used primarily to trigger cleanups'
+                             'programmatically')
     args = parser.parse_args()
-    ui = UI(autostart=args.autostart)
+    ui = UI(autostart=args.autostart, cleanup=args.cleanup)
 
 
 
