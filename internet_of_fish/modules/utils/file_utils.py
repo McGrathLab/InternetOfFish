@@ -89,9 +89,6 @@ def upload_and_delete(local_path, progress=False, delete_jsons=True):
     return out
 
 
-
-
-
 def download(cloud_path=None):
     if not cloud_path:
         rel = input(f'complete the below path stub to indicate the location of the file:'
@@ -170,3 +167,43 @@ def exists_local(local_path):
     :rtype: bool
     """
     return os.path.exists(local_path)
+
+
+def convert_all_h264s_to_mp4(parent_dir, framerate):
+    """
+    attempts to convert all h264 files in parent_dir to mp4's and delete the h264 if successful
+    """
+    h264_paths = glob(os.path.join(parent_dir, '*.h264'))
+    mp4_paths = []
+    failed_conversions = []
+    for h264_p in h264_paths:
+        if os.path.getsize(h264_p) < 100:
+            os.remove(h264_p)
+            continue
+        try:
+            mp4_p = h264_to_mp4(h264_p, framerate)
+            mp4_paths.append(mp4_p)
+        except Exception as e:
+            failed_conversions.append([h264_p, e])
+    return mp4_paths, failed_conversions
+
+
+def h264_to_mp4(h264_path, framerate):
+    """convert a .h264 video to a .mp4 video
+    :param h264_path: path to h264 file
+    :type h264_path: str
+    :return: path to newly-created mp4 file, or None if the conversion failed
+    :rtype: str
+    """
+    mp4_path = h264_path.replace('.h264', '.mp4')
+    command = ['ffmpeg', '-analyzeduration', '100M', '-probesize', '100M', '-r',
+               str(framerate), '-i', h264_path, '-threads', '1', '-c:v', 'copy', '-r',
+               str(framerate), mp4_path]
+    out = sp.run(command, capture_output=True, encoding='utf-8')
+    if os.path.exists(mp4_path) and (os.path.getsize(mp4_path) > os.path.getsize(h264_path)):
+        os.remove(h264_path)
+        return mp4_path
+    else:
+        if os.path.exists(mp4_path):
+            os.remove(mp4_path)
+        raise Exception(out.stderr)

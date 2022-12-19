@@ -48,7 +48,7 @@ class UploaderWorker(QueueProcWorker):
             time.sleep(60)
 
         else:
-            # this else clause should only executes if the while loop exited because it ran out of tries
+            # this else clause should only execute if the while loop exited because it ran out of tries
             # (tries_left = 0). If the loop instead hits a break statement (due to a successful upload or conversion)
             # this clause gets skipped.
             self.logger.warning(f'failed three times to process {os.path.basename(target)}. Moving on')
@@ -60,24 +60,14 @@ class UploaderWorker(QueueProcWorker):
         :return: path to newly-created mp4 file, or None if the conversion failed
         :rtype: str
         """
-        mp4_path = h264_path.replace('.h264', '.mp4')
-        self.logger.debug(f'converting {os.path.basename(h264_path)} to {os.path.basename(mp4_path)}')
-        command = ['ffmpeg', '-analyzeduration', '100M', '-probesize', '100M', '-r',
-                   str(self.defs.FRAMERATE), '-i', h264_path, '-threads', '1', '-c:v', 'copy', '-r',
-                   str(self.defs.FRAMERATE), mp4_path]
+        self.logger.debug(f'converting {h264_path}')
         try:
-            out = subprocess.run(command, capture_output=True, encoding='utf-8')
-            if os.path.exists(mp4_path):
-                if os.path.getsize(mp4_path) > os.path.getsize(h264_path):
-                    self.logger.debug(f'successfully converted {h264_path} to {mp4_path}')
-                    os.remove(h264_path)
-                    return mp4_path
-                else:
-                    os.remove(mp4_path)
-                    raise Exception(out.stderr)
+            mp4_path = file_utils.h264_to_mp4(h264_path, self.defs.FRAMERATE)
+            self.logger.debug(f'successfully converted {h264_path} to {mp4_path}')
+            return mp4_path
         except Exception as e:
             self.logger.warning(f'failed to convert {os.path.basename(h264_path)}.\n{e}')
-        return None
+
 
     def shutdown(self):
         """

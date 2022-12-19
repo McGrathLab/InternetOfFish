@@ -1,6 +1,9 @@
 import os, logging, posixpath
 from glob import glob
 
+# fallbacks
+DEFAULT_FRAMERATE = 30
+
 # constant paths
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 CODE_DIR = os.path.dirname(MODULE_DIR)

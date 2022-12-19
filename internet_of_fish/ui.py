@@ -11,6 +11,7 @@ from internet_of_fish.modules.utils import gen_utils, ui_utils, file_utils
 from internet_of_fish.modules import metadata
 from internet_of_fish.modules import mptools
 from internet_of_fish.modules import runner
+from internet_of_fish.modules.definitions import DEFAULT_FRAMERATE
 import colorama
 colorama.init(autoreset=True)
 
@@ -274,6 +275,11 @@ class UI:
             select_project_menu.query()
         else:
             for target in upload_targets:
+
+                _, failed_conversions = file_utils.convert_all_h264s_to_mp4(os.path.join(target, 'Videos'), DEFAULT_FRAMERATE)
+                if failed_conversions:
+                    print('failed to convert the following h264s to mp4. The raw h264 will be uploaded instead')
+
                 file_utils.upload_and_delete(target, delete_jsons=delete_jsons, progress=True)
 
 
