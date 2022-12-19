@@ -18,7 +18,7 @@ my_regexes.any_iso_time = r'([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]'
 my_regexes.any_iso_datetime = r'{}T{}'.format(my_regexes.any_iso_date, my_regexes.any_iso_time)
 my_regexes.any_email = r'.+@.+\.(com|edu|org)'
 my_regexes.any_tank_id = r't\d{3}[a-zA-Z]*|dev.*'
-my_regexes.any_movie = r'.+\.(mp4|h264)'
+my_regexes.any_movie = r'.+\.(mp4|h264|avi)'
 my_regexes.any_bool = r'[tT]rue|[fF]alse'
 my_regexes.any_null = r'[Nn][Oo][Nn][Ee]|[Nn][Uu][Ll][Ll]|'
 my_regexes.any_dict = r'{(.+: .+)*}'
@@ -201,12 +201,12 @@ class AdvancedConfigDict(MetaDataDictBase):
                                    'specified during metadata creation'),
             'CONF_THRESH':
                 MetaValue(key='CONF_THRESH',
-                          value='0.4',
+                          value='0.6',
                           pattern=my_regexes.any_float_less_than_1,
                           help_str='detector score threshold'),
             'INTERVAL_SECS':
                 MetaValue(key='INTERVAL_SECS',
-                          value='0.5',
+                          value='0.25',
                           pattern=my_regexes.any_float,
                           help_str='time between image captures in seconds'),
             'HIT_THRESH_SECS':
@@ -216,7 +216,7 @@ class AdvancedConfigDict(MetaDataDictBase):
                           help_str='approximate number of seconds of activity before an event should be registered'),
             'IMG_BUFFER_SECS':
                 MetaValue(key='IMG_BUFFER_SECS',
-                          value='30',
+                          value='10',
                           pattern=my_regexes.any_int,
                           help_str='length of video, in seconds, that will be saved when a hit occurs'),
             'START_HOUR':
@@ -241,12 +241,12 @@ class AdvancedConfigDict(MetaDataDictBase):
                           help_str='cooldown time, in seconds, between notifications'),
             'H_RESOLUTION':
                 MetaValue(key='H_RESOLUTION',
-                          value='1296',
+                          value='1280',
                           pattern=my_regexes.any_int,
                           help_str='picamera horizontal resolution'),
             'V_RESOLUTION':
                 MetaValue(key='V_RESOLUTION',
-                          value='972',
+                          value='976',
                           pattern=my_regexes.any_int,
                           help_str='picamera vertical resolution'),
             'FRAMERATE':
@@ -261,7 +261,7 @@ class AdvancedConfigDict(MetaDataDictBase):
                           help_str='email address that has been configured with sendgrid to serve notifications'),
             'MAX_UPLOAD_WORKERS':
                 MetaValue(key='MAX_UPLOAD_WORKERS',
-                          value='3',
+                          value='2',
                           pattern=my_regexes.any_int,
                           help_str='max number of simultaneous upload processes to spawn'),
             'MAX_TRIES':
@@ -514,6 +514,7 @@ class MetaDataHandler(MetaDataDict):
         self['email'] = 'themcgrathlab@gmail.com'
         self['species'] = 'na'
         self['fish_type'] = 'other'
+        self['analysis_state'] = 'testing'
         self.set_kill_condition()
         file_utils.create_project_tree(self['proj_id'], self['analysis_state'])
         with open(self['json_path'], 'w') as f:

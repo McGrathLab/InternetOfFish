@@ -1,5 +1,6 @@
 import os
 import cv2
+import time
 
 
 def jpgs_to_mp4(img_paths, dest_dir, fps):
@@ -22,5 +23,6 @@ def jpgs_to_mp4(img_paths, dest_dir, fps):
     video = cv2.VideoWriter(vid_path, fourcc, fps, (width, height))
     for img_path in img_paths:
         video.write(cv2.imread(img_path))
+        time.sleep(0.1)
     video.release()
     return vid_path

@@ -1,7 +1,10 @@
+import time
+
 from internet_of_fish.modules.mptools import QueueProcWorker
 from internet_of_fish.modules.utils import file_utils
 import os
 import subprocess
+import shutil
 
 
 class UploaderWorker(QueueProcWorker):
@@ -18,18 +21,22 @@ class UploaderWorker(QueueProcWorker):
         tries_left = self.defs.MAX_TRIES
         while not self.shutdown_event.is_set() and tries_left:
             if target.endswith('.h264'):
+                # delete tiny video fragments (~1 frame long) that are occasionally produced and will choke ffmpeg
+                if os.path.getsize(target) < 100:
+                    os.remove(target)
+                    break
                 mp4_path = self.h264_to_mp4(target)
                 if mp4_path:
                     target = mp4_path
-                else:
-                    continue
+            if target.endswith('.log'):
+                target = shutil.copy(target, self.defs.PROJ_LOG_DIR)
             try:
                 self.logger.debug(f'uploading {target} to {file_utils.local_to_cloud(target)}')
                 cmnd = ['rclone', 'copyto', target, file_utils.local_to_cloud(target)]
                 out = subprocess.run(cmnd, capture_output=True, encoding='utf-8')
                 if file_utils.exists_cloud(target):
                     self.logger.debug(f'successfully uploaded {target}')
-                    if not target.endswith('.json') or end_of_proj:
+                    if ((not target.endswith('.json')) and (target != self.metadata['source'])) or end_of_proj:
                         self.logger.debug(f'deleting {target}')
                         os.remove(target)
                     break
@@ -38,6 +45,7 @@ class UploaderWorker(QueueProcWorker):
             except Exception as e:
                 self.logger.debug(f'unexpected exception {e}')
             tries_left -= 1
+            time.sleep(60)
 
         else:
             # this else clause should only executes if the while loop exited because it ran out of tries
@@ -53,7 +61,9 @@ class UploaderWorker(QueueProcWorker):
         :rtype: str
         """
         mp4_path = h264_path.replace('.h264', '.mp4')
-        command = ['ffmpeg', '-r', str(self.defs.FRAMERATE), '-i', h264_path, '-threads', '1', '-c:v', 'copy', '-r',
+        self.logger.debug(f'converting {os.path.basename(h264_path)} to {os.path.basename(mp4_path)}')
+        command = ['ffmpeg', '-analyzeduration', '100M', '-probesize', '100M', '-r',
+                   str(self.defs.FRAMERATE), '-i', h264_path, '-threads', '1', '-c:v', 'copy', '-r',
                    str(self.defs.FRAMERATE), mp4_path]
         try:
             out = subprocess.run(command, capture_output=True, encoding='utf-8')
@@ -87,7 +97,9 @@ class EndUploaderWorker(UploaderWorker):
             item = self.work_q.safe_get()
             if not item:
                 continue
-            self.logger.debug(f"QueueProcWorker.main_loop received '{item}' message")
+            str_item = str(item)
+            str_item = str_item if len(str_item) < 10 else str_item[:10] + '...'
+            self.logger.debug(f"QueueProcWorker.main_loop received '{str_item}' message")
             if item == "END":
                 break
             else:

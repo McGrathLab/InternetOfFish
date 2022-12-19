@@ -1,35 +1,36 @@
 import os, logging, time
 from collections import namedtuple
 
-from PIL import Image, ImageDraw
 from glob import glob
+import cv2
+from math import sqrt
 import numpy as np
 
 from pycoral.adapters import common
 from pycoral.adapters import detect
-from pycoral.utils.dataset import read_label_file
-from pycoral.utils.edgetpu import make_interpreter
+from pycoral.utils.edgetpu import make_interpreter, run_inference
 
 import internet_of_fish.modules.utils.advanced_utils
 from internet_of_fish.modules import mptools
 from internet_of_fish.modules.utils import gen_utils
 
-BufferEntry = namedtuple('BufferEntry', ['cap_time', 'img', 'fish_dets', 'pipe_det'])
+BufferEntry = namedtuple('BufferEntry', ['cap_time', 'img', 'fish_dets'])
 
 class HitCounter:
 
     def __init__(self):
-        self.hits = 0
+        self.hits = 0.0
+        self.decay_rate = 0.25
+        self.growth_rate = 1.0
 
-    def increment(self):
-        self.hits += 1
+    def increment(self, modifier=1.0):
+        self.hits += (self.growth_rate * modifier)
 
     def decrement(self):
-        if self.hits > 0:
-            self.hits -= 1
+        self.hits = max(0.0, self.hits - self.decay_rate)
 
     def reset(self):
-        self.hits = 0
+        self.hits = 0.0
 
 
 class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetaclass):
@@ -39,75 +40,87 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.work_q, = args
         self.MODELS_DIR = self.defs.MODELS_DIR
         self.DATA_DIR = self.defs.DATA_DIR
-        self.HIT_THRESH = self.defs.HIT_THRESH_SECS / self.defs.INTERVAL_SECS
-        self.IMG_BUFFER = self.defs.IMG_BUFFER_SECS / self.defs.INTERVAL_SECS
+        self.HIT_THRESH = self.defs.HIT_THRESH_SECS // self.defs.INTERVAL_SECS
+        self.IMG_BUFFER = self.defs.IMG_BUFFER_SECS // self.defs.INTERVAL_SECS
+        self.INTERVAL_SECS = self.defs.INTERVAL_SECS
+        self.SAVE_INTERVAL = 3600  # minimum interval between images saved for annotation
 
     def startup(self):
-        self.mock_hit_flag = False
-        self.pipe_det = []
+        self.pipe_det = None
+        self.pipe_center = None
+        self.pipe_radius = None
+        self.force_pipe_update = True
         self.max_fish = self.metadata['n_fish'] if self.metadata['n_fish'] else self.defs.MAX_DETS
         self.img_dir = self.defs.PROJ_IMG_DIR
+        self.anno_dir = self.defs.PROJ_ANNO_DIR
+        self.count_record = open(os.path.join(self.defs.PROJ_HIT_RECORD_DIR, f'{gen_utils.current_time_iso()}.csv'), 'w')
+        self.count_buffer = ['time_ms,count\n']
+        self.mock_hit_flag = False
 
         model_paths = glob(os.path.join(self.MODELS_DIR, self.metadata['model_id'], '*.tflite'))
-        label_paths = glob(os.path.join(self.MODELS_DIR, self.metadata['model_id'], '*.txt'))
-
-        if len(model_paths) > 1:
-            self.logger.info('initializing detector in multi-network mode')
-            self.multinet_mode = True
-            fish_model = [m for m in model_paths if 'fish' in os.path.basename(m)]
-            pipe_model = [m for m in model_paths if 'pipe' in os.path.basename(m)]
-            fish_labels = [m for m in label_paths if 'fish' in os.path.basename(m)]
-            pipe_labels = [m for m in label_paths if 'pipe' in os.path.basename(m)]
-            if not fish_model or not pipe_model:
-                self.logger.error(f'multiple tflite files encountered in {self.metadata["model_id"]}, but unable to'
-                                  f'determine which is the pipe model and which is the fish model. Ensure one model'
-                                  f'contains "pipe" in its file name, and the other contains "fish"')
-                self.event_q.safe_put(mptools.EventMessage(self.name, 'HARD_SHUTDOWN', 'bad model(s)'))
-                return
-            self.interpreter = make_interpreter(fish_model[0])
-            self.interpreter.allocate_tensors()
-            self.pipe_interpreter = make_interpreter(pipe_model[0])
-            self.pipe_interpreter.allocate_tensors()
-            self.labels = read_label_file(fish_labels[0])
-            self.pipe_labels = read_label_file(pipe_labels[0])
-            self.ids = {val: key for key, val in self.labels.items()}
-        else:
-            self.multinet_mode = False
-            self.interpreter = make_interpreter(model_paths[0])
-            self.interpreter.allocate_tensors()
-            self.labels = read_label_file(label_paths[0])
-            self.ids = {val: key for key, val in self.labels.items()}
+        fish_model = [m for m in model_paths if 'fish' in os.path.basename(m)]
+        pipe_model = [m for m in model_paths if 'pipe' in os.path.basename(m)]
+        if not fish_model or not pipe_model:
+            self.logger.error(f'multiple tflite files encountered in {self.metadata["model_id"]}, but unable to'
+                              f'determine which is the pipe model and which is the fish model. Ensure one model'
+                              f'contains "pipe" in its file name, and the other contains "fish"')
+            self.event_q.safe_put(mptools.EventMessage(self.name, 'HARD_SHUTDOWN', 'bad model(s)'))
+            return
+        self.logger.debug(f'using {fish_model[0]} as fish model')
+        self.interpreter = make_interpreter(fish_model[0])
+        self.interpreter.allocate_tensors()
+        self.logger.debug(f'using {pipe_model[0]} as pipe model')
+        self.pipe_interpreter = make_interpreter(pipe_model[0])
+        self.pipe_interpreter.allocate_tensors()
 
         self.hit_counter = HitCounter()
         self.avg_timer = gen_utils.Averager()
         self.buffer = []
         self.loop_counter = 0
-
+        self.last_save = None
 
     def main_func(self, q_item):
         cap_time, img = q_item
-        if self.multinet_mode and not self.loop_counter % 100:
-            self.update_pipe_location(img)
-        if img == 'MOCK_HIT':
+        if isinstance(img, str) and (img == 'MOCK_HIT'):
             self.mock_hit_flag = True
             return
-        dets = self.detect(img)
-        fish_dets, pipe_det = self.filter_dets(dets)
-        self.buffer.append(BufferEntry(cap_time, img, fish_dets, pipe_det))
-        if self.metadata['source']:
-            self.overlay_boxes(self.buffer[-1])
-        hit_flag = self.check_for_hit(fish_dets, pipe_det)
-        self.hit_counter.increment() if hit_flag else self.hit_counter.decrement()
-        if self.mock_hit_flag or (self.hit_counter.hits >= self.HIT_THRESH):
-            self.mock_hit_flag = False
+        if not self.loop_counter % 100 or not self.pipe_det or self.force_pipe_update:
+            self.update_pipe_location(img)
+            if not self.pipe_det:
+                return
+        img = img[self.pipe_det.bbox.ymin:self.pipe_det.bbox.ymax, self.pipe_det.bbox.xmin: self.pipe_det.bbox.xmax]
+        fish_dets = sorted(self.detect(img), reverse=True, key=lambda x: x.score)
+        fish_dets = self.filter_fish_dets(fish_dets)
+        self.buffer.append(BufferEntry(cap_time, img, fish_dets))
+        hit_flag = len(fish_dets) >= 2
+        if len(fish_dets) >= 1:
+            if (
+                not self.last_save or
+                time.time() - self.last_save >= self.SAVE_INTERVAL or
+                (len(fish_dets) >= 2) and time.time() - self.last_save >= self.SAVE_INTERVAL/10
+            ):
+                self.logger.debug('saving an image for annotation')
+                self.save_for_anno(img, cap_time, fish_dets)
+        if hit_flag:
+            # modifier = sum([(det.score - self.defs.CONF_THRESH) / (1 - self.defs.CONF_THRESH) for det in fish_dets])
+            modifier = 1.0
+            self.hit_counter.increment(modifier)
+            self.logger.debug(f'hit count increased to {self.hit_counter.hits}. {self.HIT_THRESH} required to trigger')
+        else:
+            self.hit_counter.decrement()
+        self.count_buffer.append(f'{cap_time},{self.hit_counter.hits:0.2f}\n')
+        if ((self.hit_counter.hits >= self.HIT_THRESH) or self.mock_hit_flag) and (len(self.buffer) >= self.IMG_BUFFER):
             self.logger.info(f"Hit counter reached {self.hit_counter.hits}, possible spawning event")
-            img_paths = [self.overlay_boxes(be) for be in self.buffer]
-            vid_path = self.jpgs_to_mp4(img_paths)
+            img_paths = []
+            for be in self.buffer:
+                img_paths.append(self.overlay_boxes(be))
+                time.sleep(0.1)
+            vid_path = self.jpgs_to_mp4(img_paths, 1//self.INTERVAL_SECS)
 
             # comment the next two lines to disable spawning notifications
             msg = f'possible spawning event in {self.metadata["tank_id"]} at {gen_utils.current_time_iso()}'
             self.event_q.safe_put(mptools.EventMessage(self.name, 'NOTIFY', ['SPAWNING_EVENT', msg, vid_path]))
-
+            self.mock_hit_flag = False
             self.hit_counter.reset()
             self.buffer = []
         if len(self.buffer) > self.IMG_BUFFER:
@@ -115,115 +128,117 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.loop_counter += 1
         self.print_info()
 
+    def filter_fish_dets(self, fish_dets):
+        valid_dets = []
+        for det in fish_dets:
+            det_center = [(det.bbox.xmax + det.bbox.xmin) / 2, (det.bbox.ymax + det.bbox.ymin) / 2]
+            radial_dist = sqrt((det_center[0] - self.pipe_center[0])**2 + (det_center[1] - self.pipe_center[1])**2)
+            if radial_dist < self.pipe_radius:
+                valid_dets.append(det)
+        return valid_dets
+
+    def save_for_anno(self, img, cap_time, fish_dets):
+        img_path = os.path.join(self.anno_dir, f'{cap_time}.jpg')
+        dets_path = os.path.join(self.anno_dir, f'{cap_time}.txt')
+        self.last_save = time.time()
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        cv2.imwrite(img_path, img)
+        h, w, _ = img.shape
+
+        with open(dets_path, 'w') as f:
+            for bbox in [d.bbox for d in fish_dets]:
+                f.write(f'0 {(bbox.xmax+bbox.xmin)/(2*w)} '
+                        f'{(bbox.ymax+bbox.ymin)/(2*h)} '
+                        f'{(bbox.xmax-bbox.xmin)/w} '
+                        f'{(bbox.ymax - bbox.ymin)/h}\n')
+
     def print_info(self):
-        if not self.loop_counter % 100:
-            self.logger.info(f'{self.loop_counter} detection loops completed. current average detection time is '
-                             f'{self.avg_timer.avg * 1000}ms')
+        if self.loop_counter == 1 or self.loop_counter == 10 or not self.loop_counter % 100:
+            self.logger.info(f'{self.loop_counter} detection loops completed. average deteciton time for last '
+                             f'{self.avg_timer.count} loops was {self.avg_timer.avg * 1000}ms')
+            self.avg_timer.reset()
+            self.write_hit_buffer_to_file()
+
+    def write_hit_buffer_to_file(self):
+        self.count_record.writelines(self.count_buffer)
+        self.count_buffer = []
 
     def update_pipe_location(self, img):
+        self.logger.debug('updating pipe location')
         new_loc = self.detect(img, interp=self.pipe_interpreter, update_timer=False)
         if not new_loc:
-            self.logger.debug('attempted to update pipe location but pipe was not detected. keeping old location')
+            self.logger.debug('attempted to update pipe location but pipe was not detected. Will try again on next frame')
+            self.force_pipe_update = True
             return
+        old_loc = self.pipe_det
+        self.pipe_det = sorted(new_loc, reverse=True, key=lambda x: x.score)[0]
+        self.pipe_center = [(self.pipe_det.bbox.xmax - self.pipe_det.bbox.xmin) / 2,
+                            (self.pipe_det.bbox.ymax - self.pipe_det.bbox.ymin) / 2]
+        self.pipe_radius = min(self.pipe_det.bbox.width, self.pipe_det.bbox.height) / 2
+        if not old_loc:
+            self.force_pipe_update = True
+            return
+        iou = detect.BBox.iou(old_loc.bbox, self.pipe_det.bbox)
+        if iou < 0.95:
+            self.logger.info(f'low IOU score detected. Pipe locator will rerun until IOU is above 0.95')
+            self.force_pipe_update = True
         else:
-            old_loc = self.pipe_det
-            self.pipe_det = sorted(new_loc, reverse=True, key=lambda x: x.score)[:1]
-            if old_loc:
-                iou = detect.BBox.intersect(old_loc[0].bbox, self.pipe_det[0].bbox)
-                self.logger.debug(f'pipe location updated. IOU with previous location of {iou}')
-            else:
-                self.logger.debug(f'pipe location initialized as {self.pipe_det[0].bbox}')
+            self.logger.debug(f'pipe location updated. Confidence of {self.pipe_det.score}.'
+                              f' IOU with previous location of {iou}')
+            self.force_pipe_update = False
 
     def detect(self, img, interp=None, update_timer=True):
         """run detection on a single image"""
         if not interp:
             interp = self.interpreter
         start = time.time()
-        _, scale = common.set_resized_input(interp, img.size, lambda size: img.resize(size, Image.ANTIALIAS))
-        interp.invoke()
+        inf_size = common.input_size(interp)
+        scale = (inf_size[1]/img.shape[1], inf_size[0]/img.shape[0])
+        img = cv2.resize(img, inf_size)
+        run_inference(interp, img.tobytes())
         dets = detect.get_objects(interp, self.defs.CONF_THRESH, scale)
         if update_timer:
             self.avg_timer.update(time.time() - start)
         return dets
 
     def overlay_boxes(self, buffer_entry: BufferEntry):
-        """open an image, draw detection boxes, and replace the original image"""     
-        draw = ImageDraw.Draw(buffer_entry.img)
+        """open an image, draw detection boxes, and replace the original image"""
         
-        def overlay_box(det_, color_):
+        def overlay_box(img_, det_, color_):
             bbox = det_.bbox
-            draw.rectangle([(bbox.xmin, bbox.ymin), (bbox.xmax, bbox.ymax)],
-                           outline=color_)
-            draw.text((bbox.xmin + 10, bbox.ymin + 10),
-                      '%s\n%.2f' % (self.labels.get(det_.id, det_.id), det_.score),
-                      fill=color_)
-            
-        fish_dets, pipe_det =(buffer_entry.fish_dets, buffer_entry.pipe_det)
-        intersect_count = 0
-        for det in fish_dets:
-            if not pipe_det:
-                color = 'red'
-            else:
-                intersect = detect.BBox.intersect(det.bbox, pipe_det[0].bbox)
-                intersect_flag = (intersect.valid and np.isclose(intersect.area, det.bbox.area))
-                intersect_count += intersect_flag
-                color = 'green' if intersect_flag else 'red'
-            overlay_box(det, color)
-        if pipe_det:
-            color = 'red' if not intersect_count else 'yellow' if intersect_count == 1 else 'green'
-            overlay_box(pipe_det[0], color)
-        
+            cv2.rectangle(img_, (bbox.xmin, bbox.ymin), (bbox.xmax, bbox.ymax), color_, 2)
+            label = '%s\n%.2f' % ('fish', det_.score)
+            cv2.putText(img_, label,(bbox.xmin + 10, bbox.ymin + 10), cv2.FONT_HERSHEY_SIMPLEX, 1.0, color_, 2)
+        img = cv2.cvtColor(buffer_entry.img, cv2.COLOR_RGB2BGR)
+        for det in buffer_entry.fish_dets:
+            overlay_box(img, det, (0, 255, 0))
+        int_pipe_center = [int(np.round(coord)) for coord in self.pipe_center]
+        int_pipe_radius = int(np.round(self.pipe_radius))
+        cv2.circle(img, int_pipe_center, int_pipe_radius, (0, 255, 0), 2)
         img_path = os.path.join(self.img_dir, f'{buffer_entry.cap_time}.jpg')
-        buffer_entry.img.save(img_path)
+        cv2.imwrite(img_path, img)
         return img_path
 
-    def jpgs_to_mp4(self, img_paths, delete_jpgs=True):
+    def jpgs_to_mp4(self, img_paths, fps=30, delete_jpgs=True):
         """convert a series of jpgs to a single mp4, and (if delete_jpgs) delete the original images"""
+        self.logger.debug(f'converting {len(img_paths)} images to a clip at {fps} fps')
         if not img_paths:
             return
         dest_dir = self.defs.PROJ_VID_DIR
-        vid_path = internet_of_fish.modules.utils.advanced_utils.jpgs_to_mp4(img_paths, dest_dir, 1 // self.defs.INTERVAL_SECS)
+        vid_path = internet_of_fish.modules.utils.advanced_utils.jpgs_to_mp4(img_paths, dest_dir, fps)
         if delete_jpgs:
             [os.remove(x) for x in img_paths]
         return vid_path
-
-    def check_for_hit(self, fish_dets, pipe_det):
-        """check for multiple fish intersecting with the pipe and adjust hit counter accordingly"""
-        if (len(fish_dets) < 2) or (len(pipe_det) != 1):
-            return False
-        intersect_count = 0
-        pipe_det = pipe_det[0]
-        for det in fish_dets:
-            intersect = detect.BBox.intersect(det.bbox, pipe_det.bbox)
-            intersect_count += (intersect.valid and np.isclose(intersect.area, det.bbox.area))
-        if intersect_count < 2:
-            return False
-        else:
-            return True
-
-    def filter_dets(self, dets):
-        """keep only the the highest confidence pipe detection, and the top n highest confidence fish detections"""
-        if not self.multinet_mode:
-            fish_dets = [d for d in dets if d.id == self.ids['fish']]
-            fish_dets = sorted(fish_dets, reverse=True, key=lambda x: x.score)[:self.max_fish]
-            pipe_det = [d for d in dets if d.id == self.ids['pipe']]
-            pipe_det = sorted(pipe_det, reverse=True, key=lambda x: x.score)[:1]
-            return fish_dets, pipe_det
-        else:
-            return sorted(dets, reverse=True, key=lambda x: x.score)[:self.max_fish], self.pipe_det
-
-
 
     def shutdown(self):
         if self.avg_timer.avg:
             self.logger.log(logging.INFO, f'average time for detection loop: {self.avg_timer.avg * 1000}ms')
         if self.metadata['source']:
-            self.jpgs_to_mp4(glob(os.path.join(self.img_dir, '*.jpg')))
-        if self.metadata['demo'] or self.metadata['source']:
             self.event_q.safe_put(
                 mptools.EventMessage(self.name, 'ENTER_PASSIVE_MODE', f'detection complete, entering passive mode'))
         self.work_q.close()
         self.event_q.close()
+        self.count_record.close()
 
 
 

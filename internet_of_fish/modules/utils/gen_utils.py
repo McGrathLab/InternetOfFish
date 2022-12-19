@@ -8,13 +8,14 @@ import os, socket
 from functools import wraps
 from types import FunctionType, SimpleNamespace
 import colorama
+from math import ceil
 
 LOG_DIR = definitions.LOG_DIR
-logging.getLogger('PIL').setLevel(logging.WARNING)
 
 default_color = 'BLUE'
 default_style = 'BRIGHT'
 summary_logger_level = logging.INFO
+minimum_logger_level = logging.DEBUG
 
 
 def finput(prompt, options=None, simplify=True, pattern=None, mapping=None, help_str=None, confirm=False,
@@ -143,7 +144,7 @@ def current_time_iso():
 class DoubleLogger:
     def __init__(self, name):
         self.summary_logger = self.make_logger('SUMMARY', summary_logger_level)
-        self.debug_logger = self.make_logger(name.upper(), logging.DEBUG)
+        self.debug_logger = self.make_logger(name.upper(), minimum_logger_level)
 
     def make_logger(self, name, level):
         fmt = '%(asctime)s %(name)-16s %(levelname)-8s %(message)s'
@@ -219,7 +220,9 @@ def get_ip():
 
 
 def strfmt_func_call(fname, *args, **kwargs):
-    arg_str = ', '.join([str(arg) for arg in args])
+    arg_str = [str(arg) for arg in args]
+    arg_str = [arg[:10] + '...' if len(arg) > 10 else arg for arg in arg_str]
+    arg_str = ', '.join(arg_str)
     kwarg_str = ', '.join([f'{key}={val}' for key, val in kwargs.items()])
     all_args_str = ", ".join([arg_str, kwarg_str])
     all_args_str = all_args_str if all_args_str.strip() != ',' else ''
@@ -249,7 +252,8 @@ class AutologMetaclass(type):
             newClassDict = {}
             for attributeName, attribute in classDict.items():
                 if isinstance(attribute, FunctionType):
-                    attribute = autolog(attribute)
+                    # attribute = autolog(attribute)
+                    attribute = attribute
                 newClassDict[attributeName] = attribute
             return type.__new__(mcs, classname, bases, newClassDict)
 
@@ -279,6 +283,14 @@ class Averager:
         else:
             self.avg = ((self.avg * self.count) + val) / (self.count + 1)
         self.count += 1
+
+    def reset(self):
+        self.avg = None
+        self.count = 0
+
+
+def mround_up(number, base):
+    return int(base * (ceil(number/base)))
 
 
 

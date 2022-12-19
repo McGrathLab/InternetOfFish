@@ -75,7 +75,7 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
             self.logger.info(f'{event.msg_type.title()} event received. Rebooting machine')
             note = notifier.Notification(event.msg_src, event.msg_type, event.msg, self.defs.SUMMARY_LOG_FILE)
             self.main_ctx.notification_q.safe_put(note)
-            sp.run(['sudo', 'shutdown', '-r', '+5'])
+            # sp.run(['sudo', 'shutdown', '-r', '+5'])
             self.hard_shutdown()
         elif event.msg_type == 'HARD_SHUTDOWN':
             self.logger.info(f'{event.msg_type} event received. Executing hard shutdown')
@@ -161,6 +161,7 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
         n_workers = self.queue_uploads()
         for i in range(n_workers):
             self.secondary_ctx.Proc(f'UPLOAD{i+1}', uploader.UploaderWorker, self.upload_q)
+            time.sleep(0.02)
         self.logger.info('successfully entered passive mode')
 
     def hard_shutdown(self):
@@ -226,24 +227,29 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
         if not analysis_state:
             analysis_state = self.metadata['analysis_state']
         proj_dir = definitions.PROJ_DIR(proj_id, analysis_state)
-        proj_log_dir = definitions.PROJ_LOG_DIR(proj_id, analysis_state)
         proj_vid_dir = definitions.PROJ_VID_DIR(proj_id, analysis_state)
         proj_img_dir = definitions.PROJ_IMG_DIR(proj_id, analysis_state)
-
-        if os.path.exists(proj_log_dir):
-            shutil.rmtree(proj_log_dir)
-        shutil.copytree(self.defs.LOG_DIR, proj_log_dir)
+        proj_anno_dir = definitions.PROJ_ANNO_DIR(proj_id, analysis_state)
+        proj_hit_record_dir = definitions.PROJ_HIT_RECORD_DIR(proj_id, analysis_state)
+        self.logger.debug('tarring annotation directory')
+        tar_dest = file_utils.tar_directory(proj_anno_dir, new_name=str(dt.date.today()))
+        self.logger.debug(f'annotation directory tarred into {tar_dest}')
 
         upload_list = []
-        upload_list.extend(glob.glob(os.path.join(proj_log_dir, '*.log')))
+        upload_list.extend(glob.glob(os.path.join(proj_dir, '*.json')))
+        upload_list.extend(glob.glob(os.path.join(proj_hit_record_dir, '*.csv')))
+        upload_list.extend(glob.glob(os.path.join(proj_anno_dir, '*.tar')))
         upload_list.extend(glob.glob(os.path.join(proj_vid_dir, '*.h264')))
         upload_list.extend(glob.glob(os.path.join(proj_vid_dir, '*.mp4')))
+        upload_list.extend(glob.glob(os.path.join(proj_vid_dir, '*.avi')))
         upload_list.extend(glob.glob(os.path.join(proj_img_dir, '*.mp4')))
-        upload_list.extend(glob.glob(os.path.join(proj_img_dir, '*.jpg')))
-        upload_list.extend(glob.glob(os.path.join(proj_dir, '*.json')))
+        upload_list.extend(glob.glob(os.path.join(self.defs.LOG_DIR, '*.log.*')))
+        upload_list.extend(glob.glob(os.path.join(self.defs.LOG_DIR, '*.log')))
         n_workers = min(self.MAX_UPLOAD_WORKERS, len(upload_list))
         if upload_list:
             [self.upload_q.safe_put(upload) for upload in upload_list]
+            self.logger.debug('upload list contains:')
+            [self.logger.debug(f'{os.path.basename(f)}') for f in upload_list]
         if queue_end_signals:
             [self.upload_q.safe_put('END') for _ in range(n_workers)]
         return n_workers

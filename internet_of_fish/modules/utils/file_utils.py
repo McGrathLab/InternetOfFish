@@ -4,8 +4,26 @@ import pathlib
 import subprocess as sp
 import json
 from glob import glob
-
+import tarfile
 from internet_of_fish.modules import definitions
+
+
+def tar_directory(dir_path, new_name=None):
+    dir_path = pathlib.Path(dir_path)
+    if not dir_path.exists() or not dir_path.is_dir() or not any(dir_path.iterdir()):
+        return
+    if not new_name:
+        new_name = dir_path.name + '.tar'
+    elif not new_name.endswith('.tar'):
+        new_name = new_name + '.tar'
+    new_name = dir_path / new_name
+    with tarfile.open(new_name, 'w') as tarball:
+        for f in dir_path.iterdir():
+            if f.suffix == '.tar':
+                continue
+            tarball.add(f, arcname=f.name)
+            f.unlink()
+    return new_name
 
 
 def locate_newest_json():
@@ -33,22 +51,45 @@ def create_project_tree(proj_id, analysis_state):
     for dir_func in [definitions.PROJ_DIR,
                      definitions.PROJ_IMG_DIR,
                      definitions.PROJ_VID_DIR,
-                     definitions.PROJ_LOG_DIR]:
+                     definitions.PROJ_LOG_DIR,
+                     definitions.PROJ_ANNO_DIR,
+                     definitions.PROJ_HIT_RECORD_DIR]:
         path = dir_func(proj_id, analysis_state)
         if not os.path.exists(path):
             os.makedirs(path)
 
 
-def upload(local_path):
+def upload(local_path, progress=False):
     rel = os.path.relpath(local_path, definitions.HOME_DIR)
     cloud_path = str(pathlib.PurePosixPath(definitions.CLOUD_HOME_DIR) / pathlib.PurePath(rel))
     if os.path.isfile(local_path):
-        out = sp.run(['rclone', 'copy', local_path, os.path.dirname(cloud_path)], capture_output=True, encoding='utf-8')
+        cmnd = ['rclone', 'copy', local_path, os.path.dirname(cloud_path)]
     elif os.path.isdir(local_path):
-        out = sp.run(['rclone', 'copy', local_path, cloud_path], capture_output=True, encoding='utf-8')
+        cmnd = ['rclone', 'copy', local_path, cloud_path]
     else:
         return None
+    if progress:
+        cmnd.append('-P')
+    out = sp.run(cmnd, stderr=sp.PIPE, encoding='utf-8')
     return out
+
+
+def upload_and_delete(local_path, progress=False, delete_jsons=True):
+    print(f'uploading {os.path.basename(local_path)}')
+    rel = os.path.relpath(local_path, definitions.HOME_DIR)
+    cloud_path = str(pathlib.PurePosixPath(definitions.CLOUD_HOME_DIR) / pathlib.PurePath(rel))
+    cmnd = ['rclone', 'moveto', local_path, cloud_path]
+    if not delete_jsons:
+        cmnd.extend(['--exclude', '*.json'])
+    if progress:
+        cmnd.append('-P')
+    out = sp.run(cmnd, stderr=sp.PIPE, encoding='utf-8')
+    if out.stderr:
+        print(f'failed to upload {os.path.basename(local_path)} with error {out.stderr}')
+    return out
+
+
+
 
 
 def download(cloud_path=None):

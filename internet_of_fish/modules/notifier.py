@@ -3,6 +3,7 @@ from internet_of_fish.modules.utils import gen_utils
 import base64
 import os
 from datetime import datetime as dt
+from datetime import date
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import (
     Mail, Attachment, FileContent, FileName,
@@ -33,6 +34,8 @@ class NotifierWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
             api_key = f.read().strip()
         self.api_client = SendGridAPIClient(api_key)
         self.last_notification = None
+        self.n_notifications = 0
+        self.last_reset = date.today()
 
     def main_func(self, notification: Notification):
         if not self.check_notification_conditions(notification):
@@ -48,6 +51,8 @@ class NotifierWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
                 response = self.api_client.send(message)
                 if str(response.status_code) == '202':
                     self.logger.debug('notification appears to have sent successfully')
+                    self.last_notification = notification
+                    self.n_notifications += 1
                     break
                 else:
                     self.logger.debug(f'expected response status code of 202, got {response.status_code}. retrying')
@@ -56,6 +61,12 @@ class NotifierWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
                 print(e)
 
     def check_notification_conditions(self, notification: Notification):
+        if date.today() != self.last_reset:
+            self.n_notifications = 0
+            self.last_reset = date.today()
+        if self.n_notifications > 20:
+            self.logger.warning('tank has exceeded the maximum number of notifications allowed per day')
+            return False
         if not self.last_notification:
             return True
         if self.last_notification.msg_type != notification.msg_type:

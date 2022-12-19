@@ -1,20 +1,19 @@
-import logging, os, io, time
-from PIL import Image
+import logging, os, time
 from internet_of_fish.modules import mptools
 from internet_of_fish.modules.utils import gen_utils
-import picamera
 import cv2
 import datetime as dt
-
+from math import ceil
+import picamera
+import numpy as np
 
 class CollectorWorker(mptools.TimerProcWorker, metaclass=gen_utils.AutologMetaclass):
-
 
     def init_args(self, args):
         self.img_q, = args
         self.INTERVAL_SECS = self.defs.INTERVAL_SECS
-        self.RESOLUTION = (self.defs.H_RESOLUTION, self.defs.V_RESOLUTION)  # pi camera resolution
         self.FRAMERATE = self.defs.FRAMERATE  # pi camera framerate
+        self.RESOLUTION = (self.defs.H_RESOLUTION, self.defs.V_RESOLUTION) # pi camera resolution
         self.MAX_VID_LEN = self.defs.MAX_VID_LEN  # max length of an individual video (in hours)
 
     def startup(self):
@@ -22,32 +21,21 @@ class CollectorWorker(mptools.TimerProcWorker, metaclass=gen_utils.AutologMetacl
         self.vid_dir = self.defs.PROJ_VID_DIR
         self.cam.start_recording(self.generate_vid_path())
         self.last_split = dt.datetime.now().hour
+        self.last_det = gen_utils.current_time_ms()
+
+    def init_camera(self):
+        cam = picamera.PiCamera()
+        cam.resolution = self.RESOLUTION
+        cam.framerate = self.FRAMERATE
+        return cam
 
     def main_func(self):
-        tries_left = 3
-        while tries_left:
-            cap_time = gen_utils.current_time_ms()
-            stream = io.BytesIO()
-            self.cam.capture(stream, format='jpeg', use_video_port=True)
-            stream.seek(0)
-            img = Image.open(stream)
-            try:
-                img.load()
-                break
-            except IOError as e:
-                self.logger.warning(f'unable to read image stream, {tries_left} attempts remaining')
-                tries_left -= 1
-        if not tries_left:
-            self.logger.error(f'failed to read image stream 3 consecutive times. Shutting down')
-            raise e
-        put_result = self.img_q.safe_put((cap_time, img))
-        stream.close()
-        if not put_result:
-            self.INTERVAL_SECS += 0.1
-            self.logger.info(f'img_q full, slowing collection interval to {self.INTERVAL_SECS}')
+        cap_time = gen_utils.current_time_ms()
+        image = np.empty((self.RESOLUTION[1], self.RESOLUTION[0], 3), dtype=np.uint8)
+        self.cam.capture(image, format='rgb', use_video_port=True)
+        self.img_q.safe_put((cap_time, image))
         if self.MAX_VID_LEN and (dt.datetime.now().hour - self.last_split >= self.MAX_VID_LEN):
             self.split_recording()
-            self.last_split = dt.datetime.now().hour
 
     def shutdown(self):
         self.cam.stop_recording()
@@ -56,17 +44,12 @@ class CollectorWorker(mptools.TimerProcWorker, metaclass=gen_utils.AutologMetacl
         self.img_q.close()
         self.event_q.close()
 
-    def init_camera(self):
-        cam = picamera.PiCamera()
-        cam.resolution = self.RESOLUTION
-        cam.framerate = self.FRAMERATE
-        return cam
-
     def generate_vid_path(self):
         return os.path.join(self.vid_dir, f'{gen_utils.current_time_iso()}.h264')
 
     def split_recording(self):
         self.cam.split_recording(self.generate_vid_path())
+        self.last_split = dt.datetime.now().hour
 
 
 class SourceCollectorWorker(CollectorWorker):
@@ -75,14 +58,16 @@ class SourceCollectorWorker(CollectorWorker):
 
     def init_args(self, args):
         self.img_q, self.video_file = args
-        self.VIRTUAL_INTERVAL_SECS = self.defs.INTERVAL_SECS
-        self.INTERVAL_SECS = 0.1
+        self.INTERVAL_SECS = self.defs.INTERVAL_SECS
+        self.INTERVAL_MSECS = self.INTERVAL_SECS * 1000
 
     def startup(self):
         if not os.path.exists(self.video_file):
             self.locate_video()
-        self.cam = cv2.VideoCapture(self.video_file)
-        self.cap_rate = max(1, int(self.cam.get(cv2.CAP_PROP_FPS) * self.VIRTUAL_INTERVAL_SECS))
+        self.cap = cv2.VideoCapture(self.video_file)
+        self.RESOLUTION = (int(self.cap.get(3)), int(self.cap.get(4)))
+        self.FRAMERATE = int(self.cap.get(cv2.CAP_PROP_FPS))
+        self.cap_rate = max(1, int(ceil(self.FRAMERATE * self.INTERVAL_SECS)))
         self.logger.log(logging.INFO, f"Collector will add an image to the queue every {self.cap_rate} frame(s)")
         self.frame_count = 0
         self.active = True
@@ -91,18 +76,16 @@ class SourceCollectorWorker(CollectorWorker):
         if not self.active:
             time.sleep(1)
             return
+        ret, img = self.cap.read()
         cap_time = gen_utils.current_time_ms()
-        ret, frame = self.cam.read()
         if ret:
-            img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             put_result = self.img_q.safe_put((cap_time, img))
             while not put_result:
-                self.INTERVAL_SECS += 0.1
-                self.logger.debug(f'img_q full, increasing loop interval to {self.INTERVAL_SECS}')
-                time.sleep(self.INTERVAL_SECS)
+                time.sleep(1)
                 put_result = self.img_q.safe_put((cap_time, img))
             self.frame_count += self.cap_rate
-            self.cam.set(cv2.CAP_PROP_POS_FRAMES, self.frame_count)
+            self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.frame_count)
         else:
             self.active = False
             self.logger.log(logging.INFO, "VideoCollector entering sleep mode (no more frames to process)")
@@ -125,8 +108,8 @@ class SourceCollectorWorker(CollectorWorker):
                                            f'Try placing it in {self.defs.HOME_DIR}')
             raise FileNotFoundError
 
-
     def shutdown(self):
+        self.cap.release()
         self.img_q.close()
         self.event_q.close()
 

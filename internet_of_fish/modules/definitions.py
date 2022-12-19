@@ -41,6 +41,9 @@ def PROJ_VID_DIR(proj_id, analysis_state=None):
 def PROJ_IMG_DIR(proj_id, analysis_state=None):
     return os.path.join(PROJ_DIR(proj_id, analysis_state), 'Images')
 
+def PROJ_ANNO_DIR(proj_id, analysis_state=None):
+    return os.path.join(PROJ_DIR(proj_id, analysis_state), 'ToAnnotate')
+
 
 def PROJ_LOG_DIR(proj_id, analysis_state=None):
     return os.path.join(PROJ_DIR(proj_id, analysis_state), 'Logs')
@@ -48,3 +51,7 @@ def PROJ_LOG_DIR(proj_id, analysis_state=None):
 
 def PROJ_JSON_FILE(proj_id, analysis_state=None):
     return os.path.join(PROJ_DIR(proj_id, analysis_state), f'{proj_id}.json')
+
+
+def PROJ_HIT_RECORD_DIR(proj_id, analysis_state=None):
+    return os.path.join(PROJ_DIR(proj_id, analysis_state), 'HitRecords')

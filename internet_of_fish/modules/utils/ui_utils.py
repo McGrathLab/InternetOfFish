@@ -34,10 +34,12 @@ def new_project(**kwargs):
     print('project created and set as the active project. Select "start the currently active project" from the main '
           'menu to start data collection')
 
-def existing_projects():
+def existing_projects(full_paths=False):
     existing_jsons = glob(os.path.join(definitions.DATA_DIR, '**', '*.json'), recursive=True)
-    proj_ids = [os.path.dirname(os.path.basename(j_path)) for j_path in existing_jsons]
-    return proj_ids
+    if not full_paths:
+        return [os.path.basename(os.path.dirname(j_path)) for j_path in existing_jsons]
+    else:
+        return [os.path.dirname(j_path) for j_path in existing_jsons]
 
 
 def active_processes():
@@ -144,7 +146,7 @@ def inject_override(event_type: str):
 
 
 def clear_logs():
-    for log in glob(os.path.join(definitions.LOG_DIR, '*.log')):
+    for log in glob(os.path.join(definitions.LOG_DIR, '*.log*')):
         os.remove(log)
 
 
@@ -158,5 +160,6 @@ def pause_project():
         if os.path.exists(definitions.PAUSE_FILE):
             os.remove(definitions.PAUSE_FILE)
     kill_processes()
+
 
 
