@@ -154,6 +154,8 @@ def update(c):
 def cleanup(c):
     try:
         with c.cd('/home/pi/InternetOfFish'):
+            c.run('git reset --hard HEAD')
+            c.run('git pull')
             c.run('bash ~/InternetOfFish/bin/cleanup.sh')
     except Exception as e:
         print(f'cleanup failed: {e}')
