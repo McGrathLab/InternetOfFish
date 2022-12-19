@@ -16,6 +16,7 @@ default_color = 'BLUE'
 default_style = 'BRIGHT'
 summary_logger_level = logging.INFO
 minimum_logger_level = logging.DEBUG
+super_verbose = False
 
 
 def finput(prompt, options=None, simplify=True, pattern=None, mapping=None, help_str=None, confirm=False,
@@ -240,9 +241,11 @@ def autolog(method):
             except Exception as e:
                 print(e)
                 return
-        logger.debug(f'entering {strfmt_func_call(method.__name__, *method_args, **method_kwargs)}')
+        if super_verbose:
+            logger.debug(f'entering {strfmt_func_call(method.__name__, *method_args, **method_kwargs)}')
         result = method(self, *method_args, **method_kwargs)
-        logger.debug(f'exiting {method.__name__}')
+        if super_verbose:
+            logger.debug(f'exiting {method.__name__}')
         return result
     return wrapper
 
