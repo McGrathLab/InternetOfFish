@@ -21,7 +21,7 @@ class UploaderWorker(QueueProcWorker):
         tries_left = self.defs.MAX_TRIES
         while not self.shutdown_event.is_set() and tries_left:
             if target.endswith('.h264'):
-                # delete tiny video fragments (~<1 frame long) that are occasionally produced
+                # delete tiny video fragments (~1 frame long) that are occasionally produced and will choke ffmpeg
                 if os.path.getsize(target) < 100:
                     os.remove(target)
                     break
