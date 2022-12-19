@@ -61,7 +61,8 @@ class UploaderWorker(QueueProcWorker):
         :rtype: str
         """
         mp4_path = h264_path.replace('.h264', '.mp4')
-        command = ['ffmpeg', '-analyzeduration', '100', '-probesize', '10000000', '-r',
+        self.logger.debug(f'converting {os.path.basename(h264_path)} to {os.path.basename(mp4_path)}')
+        command = ['ffmpeg', '-analyzeduration', '100M', '-probesize', '100M', '-r',
                    str(self.defs.FRAMERATE), '-i', h264_path, '-threads', '1', '-c:v', 'copy', '-r',
                    str(self.defs.FRAMERATE), mp4_path]
         try:
