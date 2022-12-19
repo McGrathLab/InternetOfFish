@@ -177,12 +177,15 @@ def convert_all_h264s_to_mp4(parent_dir, framerate):
     mp4_paths = []
     failed_conversions = []
     for h264_p in h264_paths:
+        print(f'converting {os.path.basename(h264_p)}')
         if os.path.getsize(h264_p) < 100:
+            print(f'{os.path.basename(h264_p)} is a fragment. Deleting')
             os.remove(h264_p)
             continue
         try:
             mp4_p = h264_to_mp4(h264_p, framerate)
             mp4_paths.append(mp4_p)
+            print(f'{os.path.basename(h264_p)} converted successfully')
         except Exception as e:
             failed_conversions.append([h264_p, e])
     return mp4_paths, failed_conversions
