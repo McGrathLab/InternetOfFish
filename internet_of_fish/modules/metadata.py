@@ -201,7 +201,7 @@ class AdvancedConfigDict(MetaDataDictBase):
                                    'specified during metadata creation'),
             'CONF_THRESH':
                 MetaValue(key='CONF_THRESH',
-                          value='0.6',
+                          value='0.5',
                           pattern=my_regexes.any_float_less_than_1,
                           help_str='detector score threshold'),
             'INTERVAL_SECS':
