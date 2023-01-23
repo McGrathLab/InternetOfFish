@@ -111,7 +111,7 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
                 self.event_q.safe_put(mptools.EventMessage(self.name, 'ENTER_ACTIVE_MODE', 'mode switch'))
             else:
                 sleep_time = self.sleep_until_morning()
-                self.logger.info(f'no change in mode. going back to sleep for {sleep_time} seconds')
+                # self.logger.info(f'no change in mode. going back to sleep for {sleep_time} seconds')
                 pathlib.Path(self.defs.PROJ_JSON_FILE).touch()
 
                 time.sleep(sleep_time)
