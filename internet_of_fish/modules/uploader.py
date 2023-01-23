@@ -86,9 +86,9 @@ class EndUploaderWorker(UploaderWorker):
             item = self.work_q.safe_get()
             if not item:
                 continue
-            str_item = str(item)
-            str_item = str_item if len(str_item) < 10 else str_item[:10] + '...'
-            self.logger.debug(f"QueueProcWorker.main_loop received '{str_item}' message")
+            # str_item = str(item)
+            # str_item = str_item if len(str_item) < 10 else str_item[:10] + '...'
+            # self.logger.debug(f"QueueProcWorker.main_loop received '{str_item}' message")
             if item == "END":
                 break
             else:
