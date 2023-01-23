@@ -255,8 +255,7 @@ class AutologMetaclass(type):
             newClassDict = {}
             for attributeName, attribute in classDict.items():
                 if isinstance(attribute, FunctionType):
-                    # attribute = autolog(attribute)
-                    attribute = attribute
+                    attribute = autolog(attribute)
                 newClassDict[attributeName] = attribute
             return type.__new__(mcs, classname, bases, newClassDict)
 

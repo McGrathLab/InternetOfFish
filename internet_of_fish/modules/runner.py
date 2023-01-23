@@ -47,7 +47,6 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
 
 
     def main_func(self):
-        self.logger.debug(f"Entering RunnerWorker.main_func")
         if dt.datetime.now() > self.die_time:
             self.logger.debug(f"RunnerWorker injected a HARD_SHUTDOWN into the event queue")
             self.event_q.safe_put(mptools.EventMessage(self.name, 'HARD_SHUTDOWN', 'die_time exceeded'))
@@ -97,7 +96,6 @@ class RunnerWorker(mptools.ProcWorker, metaclass=gen_utils.AutologMetaclass):
             self.mock_hit()
         else:
             self.logger.error(f"Unknown Event: {event}")
-        self.logger.debug(f"exiting RunnerWorker.main_func")
 
     def shutdown(self):
         self.hard_shutdown()

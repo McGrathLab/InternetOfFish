@@ -82,7 +82,6 @@ class EndUploaderWorker(UploaderWorker):
     """identical to UploaderWorker, except that it will delete the json file after uploading it"""
 
     def main_loop(self):
-        self.logger.debug("Entering QueueProcWorker.main_loop")
         while not self.shutdown_event.is_set():
             item = self.work_q.safe_get()
             if not item:
