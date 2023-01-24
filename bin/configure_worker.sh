@@ -15,7 +15,7 @@ curl https://rclone.org/install.sh | sudo bash
 sudo pip3 install --upgrade pip
 sudo pip3 install picamera
 sudo pip3 install sendgrid
-sudo pip3 install opencv-python-headless
+sudo pip3 install opencv-python-headless==4.6.0.66
 sudo pip3 install ffmpeg
 sudo pip3 install -U numpy
 sudo apt-get -y install libatlas-base-dev
