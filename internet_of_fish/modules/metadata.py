@@ -236,7 +236,7 @@ class AdvancedConfigDict(MetaDataDictBase):
                           help_str='maximum video length in hours. Set to 0 to disable video splitting'),
             'MIN_NOTIFICATION_INTERVAL':
                 MetaValue(key='MIN_NOTIFICATION_INTERVAL',
-                          value='600',
+                          value='120',
                           pattern=my_regexes.any_int,
                           help_str='cooldown time, in seconds, between notifications'),
             'H_RESOLUTION':

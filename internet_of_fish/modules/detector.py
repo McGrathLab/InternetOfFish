@@ -44,6 +44,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.IMG_BUFFER = self.defs.IMG_BUFFER_SECS // self.defs.INTERVAL_SECS
         self.INTERVAL_SECS = self.defs.INTERVAL_SECS
         self.SAVE_INTERVAL = 3600  # minimum interval between images saved for annotation
+        self.MIN_EVENT_INTERVAL = 30 # minimum number of seconds between events
 
     def startup(self):
         self.pipe_det = None
@@ -78,6 +79,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.buffer = []
         self.loop_counter = 0
         self.last_save = None
+        self.last_event = None
 
     def main_func(self, q_item):
         cap_time, img = q_item
@@ -109,17 +111,21 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         else:
             self.hit_counter.decrement()
         self.count_buffer.append(f'{cap_time},{self.hit_counter.hits:0.2f}\n')
-        if ((self.hit_counter.hits >= self.HIT_THRESH) or self.mock_hit_flag) and (len(self.buffer) >= self.IMG_BUFFER):
+        if (
+            ((self.hit_counter.hits >= self.HIT_THRESH) or self.mock_hit_flag) and
+            len(self.buffer) >= self.IMG_BUFFER and
+            (not self.last_event or (time.time() - self.last_save >= self.MIN_EVENT_INTERVAL))
+        ):
             self.logger.info(f"Hit counter reached {self.hit_counter.hits}, possible spawning event")
             img_paths = []
             for be in self.buffer:
                 img_paths.append(self.overlay_boxes(be))
-                time.sleep(0.1)
             vid_path = self.jpgs_to_mp4(img_paths, 1//self.INTERVAL_SECS)
 
             # comment the next two lines to disable spawning notifications
             msg = f'possible spawning event in {self.metadata["tank_id"]} at {gen_utils.current_time_iso()}'
             self.event_q.safe_put(mptools.EventMessage(self.name, 'NOTIFY', ['SPAWNING_EVENT', msg, vid_path]))
+            self.last_event = time.time()
             self.mock_hit_flag = False
             self.hit_counter.reset()
             self.buffer = []

@@ -28,7 +28,8 @@ class Notification:
 class NotifierWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetaclass):
 
     def startup(self):
-        self.MIN_NOTIFICATION_INTERVAL = self.defs.MIN_NOTIFICATION_INTERVAL
+        # self.MIN_NOTIFICATION_INTERVAL = self.defs.MIN_NOTIFICATION_INTERVAL
+        self.MIN_NOTIFICATION_INTERVAL = 120  # TEMPORARY OVERRIDE
         self.user_email = self.metadata['email']
         with open(self.defs.SENDGRID_KEY_FILE, 'r') as f:
             api_key = f.read().strip()
