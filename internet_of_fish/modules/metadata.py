@@ -279,13 +279,7 @@ class AdvancedConfigDict(MetaDataDictBase):
                           value='10',
                           pattern=my_regexes.any_float,
                           help_str='default time to wait for a process to shut down normally before '
-                                   'force-terminating it'),
-            'STATUS_INTERVAL':
-                MetaValue(key='STATUS_INTERVAL',
-                          value='60',
-                          pattern=my_regexes.any_float,
-                          help_str='default interval at which the app will attempt to send a status update to the '
-                                   'controller')
+                                   'force-terminating it')
         }
 
 

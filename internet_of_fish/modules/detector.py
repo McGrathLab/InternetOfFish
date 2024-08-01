@@ -43,7 +43,6 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.HIT_THRESH = self.defs.HIT_THRESH_SECS // self.defs.INTERVAL_SECS
         self.IMG_BUFFER = self.defs.IMG_BUFFER_SECS // self.defs.INTERVAL_SECS
         self.INTERVAL_SECS = self.defs.INTERVAL_SECS
-        self.SAVE_INTERVAL = 3600  # minimum interval between images saved for annotation
         self.MIN_EVENT_INTERVAL = 30 # minimum number of seconds between events
 
     def startup(self):
@@ -59,8 +58,8 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.mock_hit_flag = False
 
         model_paths = glob(os.path.join(self.MODELS_DIR, self.metadata['model_id'], '*.tflite'))
-        fish_model = [m for m in model_paths if 'fish' in os.path.basename(m)]
-        pipe_model = [m for m in model_paths if 'pipe' in os.path.basename(m)]
+        fish_model = [m for m in model_paths if 'ooi' in os.path.basename(m)]
+        pipe_model = [m for m in model_paths if 'roi' in os.path.basename(m)]
         if not fish_model or not pipe_model:
             self.logger.error(f'multiple tflite files encountered in {self.metadata["model_id"]}, but unable to'
                               f'determine which is the pipe model and which is the fish model. Ensure one model'
@@ -78,7 +77,6 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         self.avg_timer = gen_utils.Averager()
         self.buffer = []
         self.loop_counter = 0
-        self.last_save = None
         self.last_event = None
 
     def main_func(self, q_item):
@@ -95,14 +93,6 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         fish_dets = self.filter_fish_dets(fish_dets)
         self.buffer.append(BufferEntry(cap_time, img, fish_dets))
         hit_flag = len(fish_dets) >= 2
-        if len(fish_dets) >= 1:
-            if (
-                not self.last_save or
-                time.time() - self.last_save >= self.SAVE_INTERVAL or
-                (len(fish_dets) >= 2) and time.time() - self.last_save >= self.SAVE_INTERVAL/10
-            ):
-                self.logger.debug('saving an image for annotation')
-                self.save_for_anno(img, cap_time, fish_dets)
         if hit_flag:
             # modifier = sum([(det.score - self.defs.CONF_THRESH) / (1 - self.defs.CONF_THRESH) for det in fish_dets])
             modifier = 1.0
@@ -114,7 +104,7 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
         if (
             ((self.hit_counter.hits >= self.HIT_THRESH) or self.mock_hit_flag) and
             len(self.buffer) >= self.IMG_BUFFER and
-            (not self.last_event or (time.time() - self.last_save >= self.MIN_EVENT_INTERVAL))
+            (not self.last_event or (time.time() - self.last_event) >= self.MIN_EVENT_INTERVAL))
         ):
             self.logger.info(f"Hit counter reached {self.hit_counter.hits}, possible spawning event")
             img_paths = []
@@ -143,20 +133,6 @@ class DetectorWorker(mptools.QueueProcWorker, metaclass=gen_utils.AutologMetacla
                 valid_dets.append(det)
         return valid_dets
 
-    def save_for_anno(self, img, cap_time, fish_dets):
-        img_path = os.path.join(self.anno_dir, f'{cap_time}.jpg')
-        dets_path = os.path.join(self.anno_dir, f'{cap_time}.txt')
-        self.last_save = time.time()
-        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(img_path, img)
-        h, w, _ = img.shape
-
-        with open(dets_path, 'w') as f:
-            for bbox in [d.bbox for d in fish_dets]:
-                f.write(f'0 {(bbox.xmax+bbox.xmin)/(2*w)} '
-                        f'{(bbox.ymax+bbox.ymin)/(2*h)} '
-                        f'{(bbox.xmax-bbox.xmin)/w} '
-                        f'{(bbox.ymax - bbox.ymin)/h}\n')
 
     def print_info(self):
         if self.loop_counter == 1 or self.loop_counter == 10 or not self.loop_counter % 100:
